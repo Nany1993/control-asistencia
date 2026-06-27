@@ -59,11 +59,27 @@ class CapacitacionExportService {
 
     final pdf = pw.Document();
     final generado = DateTime.now();
+    final exportadoEn =
+        '${_dateFormat.format(generado)} ${_timeFormat.format(generado)}';
+    final fuenteInformacion =
+        'Fuente de la informacion: exportado el $exportadoEn desde la app Control Asistencia';
+
+    pw.Widget pdfFooter(pw.Context context) {
+      return pw.Container(
+        alignment: pw.Alignment.centerLeft,
+        margin: const pw.EdgeInsets.only(top: 12),
+        child: pw.Text(
+          fuenteInformacion,
+          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+        ),
+      );
+    }
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
+        footer: pdfFooter,
         build: (context) => [
           pw.Text(
             'Informe de asistencia a capacitacion',
@@ -83,7 +99,11 @@ class CapacitacionExportService {
           if (cap.empresaNombre != null)
             _infoRow('Empresa', cap.empresaNombre!),
           _infoRow('Total asistentes', '${asistentes.length}'),
-          _infoRow('Informe generado', _dateFormat.format(generado)),
+          pw.SizedBox(height: 8),
+          pw.Text(
+            fuenteInformacion,
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
+          ),
           pw.SizedBox(height: 16),
           if (cap.tieneFotoGeneral) ...[
             pw.Text(
@@ -145,6 +165,7 @@ class CapacitacionExportService {
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(40),
+          footer: pdfFooter,
           build: (context) => [
             pw.Text(
               'Evidencia fotografica individual',
