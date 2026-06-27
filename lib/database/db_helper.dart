@@ -20,6 +20,18 @@ class DbHelper {
     return _db!;
   }
 
+  Future<void> closeForBackup() async {
+    if (_db != null) {
+      await _db!.close();
+      _db = null;
+    }
+  }
+
+  static Future<String> databaseFilePath() async {
+    final dbPath = await getDatabasesPath();
+    return join(dbPath, 'control_asistencia.db');
+  }
+
   Future<Database> _open() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'control_asistencia.db');

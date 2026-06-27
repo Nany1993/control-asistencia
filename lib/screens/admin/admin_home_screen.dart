@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'asistencia_cap_screen.dart';
+import 'backup_screen.dart';
 import 'capacitaciones_screen.dart';
 import 'config_screen.dart';
 import 'empleados_screen.dart';
@@ -88,6 +89,14 @@ class AdminHomeScreen extends StatelessWidget {
             subtitle: 'Generar CSV y compartir reporte',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ExportScreen()),
+            ),
+          ),
+          _AdminTile(
+            icon: Icons.backup,
+            title: 'Respaldo de datos',
+            subtitle: 'Descargar copia de base de datos y fotos',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const BackupScreen()),
             ),
           ),
           _AdminTile(

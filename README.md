@@ -4,7 +4,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.6.3
+**Version actual:** 1.6.4
 
 ## Funciones
 
@@ -127,6 +127,13 @@ Admin → Exportar:
 - **Compartir:** use **Generar y compartir** para elegir la app (correo, WhatsApp, Drive, etc.)
 
 Los archivos se guardan en la carpeta interna `exportes` de la app.
+
+## Respaldo de datos
+
+Admin → **Respaldo de datos**:
+
+- Genera un archivo `.zip` con la base de datos, fotos y exportes
+- Use **Generar y compartir respaldo** para guardarlo en Drive, correo o PC
 
 ## Contribuir / mejoras
 
