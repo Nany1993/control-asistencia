@@ -1,17 +1,66 @@
 # Control Asistencia
 
-App Android offline para control de asistencia con foto, entrada/salida y modulo administrador protegido con PIN.
+App Android offline para control de asistencia con foto, entrada/salida, turnos y modulo administrador protegido con PIN.
+
+**Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
+
+**Version actual:** 1.4.0
 
 ## Funciones
 
-- **Asistencia (pantalla principal):** empresa → empleado → tipo (entrada/salida) → foto → guardar.
-- **Administracion (PIN):** CRUD de empresas y empleados, ver registros, exportar CSV y cambiar PIN.
+### Asistencia (pantalla principal)
+
+- Flujo: empresa → persona → tipo (entrada/salida) → foto → guardar.
+- Pestañas **Internos** y **Externos** con busqueda por nombre o documento.
+- Alternancia entrada/salida: no permite dos entradas o dos salidas seguidas.
+- Boton seleccionado resaltado en azul.
+
+### Internos y turnos
+
+- **Turnos** por empresa: hora entrada/salida, tolerancia, dias de la semana.
+- Horario de **almuerzo** opcional en el turno (inicio y fin).
+- Asignacion de turno a cada empleado interno.
+- **Llegada tarde:** solo en la primera entrada del dia (respeta tolerancia del turno).
+- **Reingreso:** si ya entro y salio, al volver a entrar no se marca llegada tarde.
+- **Salida anticipada:** si sale antes del fin del turno, pide motivo:
+  - **Cita medica** → radicado obligatorio
+  - **Permiso** → radicado obligatorio
+  - **Almuerzo** → sin radicado
+  - **Sin permiso** → nota opcional (texto libre)
+- Si sale dentro del **horario de almuerzo** del turno, se registra como almuerzo automaticamente.
+- Al **volver de almuerzo**, indica cuanto se demoro (y exceso sobre el horario del turno, si aplica).
+
+### Externos
+
+- Personas externas separadas de internos (CRUD propio).
+- Una empresa por externo; sin turnos ni evaluacion de horarios.
+- Misma alternancia entrada/salida y registro con foto.
+
+### Administracion (PIN)
+
+Menu: Empresas → Turnos → Empleados → Externos → Registros → Exportar → Modificar PIN.
+
+- CRUD de empresas, empleados internos, externos y turnos.
+- Ver registros con filtros y fotos.
+- Exportar CSV con motivo de salida, radicado y observaciones.
+- Cambiar PIN de administrador.
+
+### General
+
 - **Offline:** datos en SQLite local; fotos en almacenamiento del dispositivo.
-- **Varias marcaciones por dia:** permite salir y volver a entrar.
+- **Varias marcaciones por dia:** permite salir y volver a entrar (almuerzo, permisos, etc.).
 
 ## PIN inicial
 
-- **1957** (puede cambiarlo en **Modificar PIN** desde la pantalla de administrador o en Admin → Modificar PIN)
+- **1957** (cambiable en Admin → Modificar PIN)
+
+## Clonar el proyecto
+
+```powershell
+git clone https://github.com/Nany1993/control-asistencia.git
+cd control-asistencia
+flutter pub get
+```
 
 ## Requisitos para generar el APK
 
@@ -21,8 +70,18 @@ App Android offline para control de asistencia con foto, entrada/salida y modulo
 
 ## Generar APK
 
+### Windows (recomendado si la ruta del usuario tiene espacios)
+
 ```powershell
 cd "c:\Users\ACER NITRO\Downloads\Control asistencia"
+powershell -ExecutionPolicy Bypass -File .\build-apk.ps1
+```
+
+El script compila desde `C:\control_asistencia` y copia el APK a `Control-Asistencia.apk` en la carpeta del proyecto.
+
+### Compilacion directa
+
+```powershell
 flutter pub get
 flutter build apk --release
 ```
@@ -35,25 +94,35 @@ build\app\outputs\flutter-apk\app-release.apk
 
 ## Instalar en un Android
 
-1. Copie `app-release.apk` al celular o tablet.
+1. Copie el APK al celular o tablet.
 2. Abra el archivo y permita **instalar apps desconocidas** si el sistema lo pide.
 3. Instale y abra **Control Asistencia**.
 
 ## Uso rapido
 
 1. Toque el icono de administrador (esquina superior derecha en Asistencia).
-2. Ingrese PIN `1957` (o el PIN que haya configurado).
-3. Cree una **empresa** y sus **empleados**.
+2. Ingrese PIN `1957` (o el PIN configurado).
+3. Cree una **empresa**, sus **turnos** (internos) y **empleados** o **externos**.
 4. Vuelva a Asistencia y registre marcaciones.
 
 ## Exportar reportes
 
 Admin → Exportar → Generar CSV o Generar y compartir (WhatsApp, Drive, etc.).
 
+Columnas del CSV: empresa, tipo persona, empleado, turno, documento, fecha, hora, tipo marcacion, motivo salida, radicado, observacion, ruta foto.
+
 Los archivos CSV se guardan en la carpeta interna `exportes` de la app.
+
+## Contribuir / mejoras
+
+```powershell
+git add .
+git commit -m "Descripcion del cambio"
+git push
+```
 
 ## Notas
 
 - La hora de marcacion usa el reloj del dispositivo.
-- Al eliminar una empresa se borran sus empleados y registros.
-- Sugiere alternar entrada/salida segun la ultima marcacion del empleado.
+- Al eliminar una empresa se borran sus empleados, turnos y registros.
+- El APK generado localmente no se sube al repositorio (ver `.gitignore`).
