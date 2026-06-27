@@ -4,7 +4,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.6.0
+**Version actual:** 1.6.1
 
 ## Funciones
 
@@ -124,6 +124,7 @@ Admin → Exportar:
 
 - **Asistencia laboral:** CSV
 - **Capacitaciones:** informe PDF (recomendado para SST) o CSV
+- **Enviar por Gmail:** boton dedicado en cada reporte (adjunto listo en Gmail)
 
 Los archivos se guardan en la carpeta interna `exportes` de la app.
 
