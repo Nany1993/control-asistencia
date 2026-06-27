@@ -5,7 +5,6 @@ import '../../database/db_helper.dart';
 import '../../models/capacitacion.dart';
 import '../../models/empresa.dart';
 import '../../services/capacitacion_export_service.dart';
-import '../../services/email_service.dart';
 import '../../services/export_service.dart';
 
 class ExportScreen extends StatefulWidget {
@@ -62,16 +61,12 @@ class _ExportScreenState extends State<ExportScreen> {
     }
   }
 
-  void _showResult({required bool share, required bool email}) {
-    final msg = email
-        ? 'Gmail abierto con el reporte adjunto'
-        : share
-            ? 'Reporte compartido'
-            : 'Reporte guardado';
+  void _showResult({required bool share}) {
+    final msg = share ? 'Reporte compartido' : 'Reporte guardado';
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Future<void> _exportAsistencia({bool share = false, bool email = false}) async {
+  Future<void> _exportAsistencia({bool share = false}) async {
     setState(() {
       _exporting = true;
       _lastFile = null;
@@ -85,16 +80,10 @@ class _ExportScreenState extends State<ExportScreen> {
       );
       if (share) {
         await ExportService.instance.shareFile(file);
-      } else if (email) {
-        await EmailService.instance.sendViaGmail(
-          file: file,
-          subject: 'Reporte de asistencia - ${_dateFormat.format(DateTime.now())}',
-          body: 'Adjunto reporte de asistencia generado desde Control Asistencia.',
-        );
       }
       if (mounted) {
         setState(() => _lastFile = file.path);
-        _showResult(share: share, email: email);
+        _showResult(share: share);
       }
     } catch (e) {
       if (mounted) {
@@ -110,7 +99,6 @@ class _ExportScreenState extends State<ExportScreen> {
   Future<void> _exportCapacitacion({
     required bool pdf,
     bool share = false,
-    bool email = false,
   }) async {
     if (_capacitacionId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -125,7 +113,6 @@ class _ExportScreenState extends State<ExportScreen> {
     });
 
     try {
-      final cap = _capacitaciones.firstWhere((c) => c.id == _capacitacionId);
       final file = pdf
           ? await CapacitacionExportService.instance.exportPdf(_capacitacionId!)
           : await CapacitacionExportService.instance.exportCsv(_capacitacionId!);
@@ -135,19 +122,11 @@ class _ExportScreenState extends State<ExportScreen> {
           file,
           text: pdf ? 'Informe de capacitacion' : 'Planilla de capacitacion',
         );
-      } else if (email) {
-        final tipo = pdf ? 'Informe PDF' : 'Planilla CSV';
-        await EmailService.instance.sendViaGmail(
-          file: file,
-          subject: '$tipo capacitacion - ${cap.nombre}',
-          body: 'Adjunto $tipo de la capacitacion "${cap.nombre}" '
-              'generado desde Control Asistencia.',
-        );
       }
 
       if (mounted) {
         setState(() => _lastFile = file.path);
-        _showResult(share: share, email: email);
+        _showResult(share: share);
       }
     } catch (e) {
       if (mounted) {
@@ -158,14 +137,6 @@ class _ExportScreenState extends State<ExportScreen> {
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
-  }
-
-  Widget _gmailButton({required VoidCallback onPressed}) {
-    return OutlinedButton.icon(
-      onPressed: _exporting ? null : onPressed,
-      icon: const Icon(Icons.email_outlined),
-      label: const Text('Enviar por Gmail'),
-    );
   }
 
   @override
@@ -232,8 +203,6 @@ class _ExportScreenState extends State<ExportScreen> {
                   icon: const Icon(Icons.share),
                   label: const Text('Generar y compartir CSV'),
                 ),
-                const SizedBox(height: 12),
-                _gmailButton(onPressed: () => _exportAsistencia(email: true)),
               ],
             ),
             ListView(
@@ -270,18 +239,18 @@ class _ExportScreenState extends State<ExportScreen> {
                   label: const Text('Generar PDF y compartir'),
                 ),
                 const SizedBox(height: 12),
-                _gmailButton(
-                  onPressed: () => _exportCapacitacion(pdf: true, email: true),
-                ),
-                const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: _exporting ? null : () => _exportCapacitacion(pdf: false),
                   icon: const Icon(Icons.table_chart),
                   label: const Text('Generar CSV'),
                 ),
                 const SizedBox(height: 12),
-                _gmailButton(
-                  onPressed: () => _exportCapacitacion(pdf: false, email: true),
+                OutlinedButton.icon(
+                  onPressed: _exporting
+                      ? null
+                      : () => _exportCapacitacion(pdf: false, share: true),
+                  icon: const Icon(Icons.share),
+                  label: const Text('Generar CSV y compartir'),
                 ),
               ],
             ),

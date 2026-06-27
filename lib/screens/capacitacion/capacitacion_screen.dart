@@ -279,11 +279,12 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          children: [
           const _SectionTitle('1. Capacitacion'),
           DropdownButtonFormField<Capacitacion>(
             initialValue: _capacitacion,
@@ -413,19 +414,28 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
             icon: const Icon(Icons.camera_alt),
             label: Text(_foto == null ? 'Tomar foto' : 'Tomar otra foto'),
           ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: _canSave ? _guardar : null,
-            icon: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.check),
-            label: const Text('Registrar asistencia'),
-          ),
         ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: _canSave ? _guardar : null,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check),
+              label: const Text('Registrar asistencia'),
+            ),
+          ),
+        ),
       ),
     );
   }

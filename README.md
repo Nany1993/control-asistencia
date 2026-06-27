@@ -4,7 +4,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.6.1
+**Version actual:** 1.6.2
 
 ## Funciones
 
@@ -122,9 +122,9 @@ build\app\outputs\flutter-apk\app-release.apk
 
 Admin → Exportar:
 
-- **Asistencia laboral:** CSV
+- **Asistencia laboral:** CSV (generar o compartir por Gmail, WhatsApp, etc.)
 - **Capacitaciones:** informe PDF (recomendado para SST) o CSV
-- **Enviar por Gmail:** boton dedicado en cada reporte (adjunto listo en Gmail)
+- **Compartir:** use **Generar y compartir** para elegir la app (correo, WhatsApp, Drive, etc.)
 
 Los archivos se guardan en la carpeta interna `exportes` de la app.
 
