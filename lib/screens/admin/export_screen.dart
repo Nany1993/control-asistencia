@@ -6,6 +6,7 @@ import '../../models/capacitacion.dart';
 import '../../models/empresa.dart';
 import '../../services/capacitacion_export_service.dart';
 import '../../services/export_service.dart';
+import '../../utils/persona_search.dart';
 
 class ExportScreen extends StatefulWidget {
   const ExportScreen({super.key});
@@ -21,14 +22,71 @@ class _ExportScreenState extends State<ExportScreen> {
   int? _capacitacionId;
   DateTime? _desde;
   DateTime? _hasta;
+  DateTime? _capDesde;
+  DateTime? _capHasta;
   bool _exporting = false;
   String? _lastFile;
   final _dateFormat = DateFormat('dd/MM/yyyy');
+  final _capBusqueda = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _capBusqueda.dispose();
+    super.dispose();
+  }
+
+  List<Capacitacion> get _capacitacionesFiltradas {
+    var list = _capacitaciones;
+
+    if (_capDesde != null) {
+      list = list.where((c) => !c.fechaDia.isBefore(_capDesde!)).toList();
+    }
+    if (_capHasta != null) {
+      final hasta = DateTime(_capHasta!.year, _capHasta!.month, _capHasta!.day);
+      list = list.where((c) => !c.fechaDia.isAfter(hasta)).toList();
+    }
+
+    final query = _capBusqueda.text.trim();
+    if (query.isNotEmpty) {
+      list = list.where((c) => _capacitacionMatches(c, query)).toList();
+    }
+
+    return list;
+  }
+
+  bool _capacitacionMatches(Capacitacion cap, String query) {
+    final tokens = PersonaSearch.normalize(query)
+        .split(' ')
+        .where((t) => t.isNotEmpty);
+    final haystack = PersonaSearch.normalize(
+      '${cap.nombre} ${cap.temas} ${cap.expositor} '
+      '${cap.empresaNombre ?? ''} ${_dateFormat.format(cap.fecha)} '
+      '${cap.estadoLabel} ${cap.resultadoLabel ?? ''}',
+    );
+
+    for (final token in tokens) {
+      if (!haystack.contains(token)) return false;
+    }
+    return true;
+  }
+
+  void _seleccionarCapacitacion(int? id) {
+    setState(() => _capacitacionId = id);
+  }
+
+  void _limpiarFiltrosCapacitacion() {
+    setState(() {
+      _capDesde = null;
+      _capHasta = null;
+      _capBusqueda.clear();
+      _capacitacionId = null;
+    });
   }
 
   Future<void> _load() async {
@@ -42,8 +100,11 @@ class _ExportScreenState extends State<ExportScreen> {
     }
   }
 
-  Future<void> _pickDate({required bool desde}) async {
-    final initial = desde ? (_desde ?? DateTime.now()) : (_hasta ?? DateTime.now());
+  Future<void> _pickDate({required bool desde, required bool capacitacion}) async {
+    final cap = capacitacion;
+    final initial = desde
+        ? (cap ? (_capDesde ?? DateTime.now()) : (_desde ?? DateTime.now()))
+        : (cap ? (_capHasta ?? DateTime.now()) : (_hasta ?? DateTime.now()));
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -52,7 +113,17 @@ class _ExportScreenState extends State<ExportScreen> {
     );
     if (picked != null) {
       setState(() {
-        if (desde) {
+        if (capacitacion) {
+          if (desde) {
+            _capDesde = DateTime(picked.year, picked.month, picked.day);
+          } else {
+            _capHasta = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
+          }
+          if (_capacitacionId != null &&
+              !_capacitacionesFiltradas.any((c) => c.id == _capacitacionId)) {
+            _capacitacionId = null;
+          }
+        } else if (desde) {
           _desde = DateTime(picked.year, picked.month, picked.day);
         } else {
           _hasta = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
@@ -179,7 +250,7 @@ class _ExportScreenState extends State<ExportScreen> {
                   subtitle: Text(_desde?.toString().split(' ').first ?? 'Sin filtro'),
                   trailing: IconButton(
                     icon: const Icon(Icons.calendar_today),
-                    onPressed: () => _pickDate(desde: true),
+                    onPressed: () => _pickDate(desde: true, capacitacion: false),
                   ),
                 ),
                 ListTile(
@@ -188,7 +259,7 @@ class _ExportScreenState extends State<ExportScreen> {
                   subtitle: Text(_hasta?.toString().split(' ').first ?? 'Sin filtro'),
                   trailing: IconButton(
                     icon: const Icon(Icons.calendar_today),
-                    onPressed: () => _pickDate(desde: false),
+                    onPressed: () => _pickDate(desde: false, capacitacion: false),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -208,22 +279,92 @@ class _ExportScreenState extends State<ExportScreen> {
             ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                DropdownButtonFormField<int?>(
-                  initialValue: _capacitacionId,
-                  decoration: const InputDecoration(
-                    labelText: 'Capacitacion',
-                    border: OutlineInputBorder(),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Desde'),
+                  subtitle: Text(
+                    _capDesde != null
+                        ? _dateFormat.format(_capDesde!)
+                        : 'Sin filtro',
                   ),
-                  items: _capacitaciones
-                      .map(
-                        (c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.nombre),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _capacitacionId = v),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.calendar_today),
+                    onPressed: () => _pickDate(desde: true, capacitacion: true),
+                  ),
                 ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Hasta'),
+                  subtitle: Text(
+                    _capHasta != null
+                        ? _dateFormat.format(_capHasta!)
+                        : 'Sin filtro',
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.calendar_today),
+                    onPressed: () => _pickDate(desde: false, capacitacion: true),
+                  ),
+                ),
+                if (_capDesde != null || _capHasta != null || _capBusqueda.text.isNotEmpty)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _limpiarFiltrosCapacitacion,
+                      icon: const Icon(Icons.filter_alt_off),
+                      label: const Text('Limpiar filtros'),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                PersonaSearchField(
+                  controller: _capBusqueda,
+                  hintText: 'Buscar por nombre, expositor, temas o empresa...',
+                  onChanged: (_) {
+                    setState(() {
+                      if (_capacitacionId != null &&
+                          !_capacitacionesFiltradas.any((c) => c.id == _capacitacionId)) {
+                        _capacitacionId = null;
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${_capacitacionesFiltradas.length} capacitacion(es)',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                if (_capacitaciones.isEmpty)
+                  const Text('No hay capacitaciones registradas')
+                else if (_capacitacionesFiltradas.isEmpty)
+                  const Text('Sin coincidencias con los filtros actuales')
+                else
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 280),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _capacitacionesFiltradas.length,
+                      itemBuilder: (context, index) {
+                        final cap = _capacitacionesFiltradas[index];
+                        final selected = _capacitacionId == cap.id;
+                        return Card(
+                          color: selected ? Colors.blue.shade50 : null,
+                          child: ListTile(
+                            selected: selected,
+                            title: Text(cap.nombre),
+                            subtitle: Text(
+                              '${_dateFormat.format(cap.fecha)} · ${cap.expositor}'
+                              '${cap.empresaNombre != null ? ' · ${cap.empresaNombre}' : ''}'
+                              ' · ${cap.estadoLabel}',
+                            ),
+                            trailing: selected
+                                ? const Icon(Icons.check_circle, color: Colors.blue)
+                                : null,
+                            onTap: () => _seleccionarCapacitacion(cap.id),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: _exporting ? null : () => _exportCapacitacion(pdf: true),
