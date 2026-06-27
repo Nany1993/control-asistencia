@@ -315,18 +315,6 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
     final filtradas = _personasFiltradas;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Marcar asistencia'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings_outlined),
-            tooltip: 'Administracion',
-            onPressed: () {
-              Navigator.of(context).pushNamed('/admin-pin');
-            },
-          ),
-        ],
-      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _empresas.isEmpty

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'asistencia_cap_screen.dart';
+import 'capacitaciones_screen.dart';
 import 'config_screen.dart';
 import 'empleados_screen.dart';
 import 'empresas_screen.dart';
@@ -54,6 +56,22 @@ class AdminHomeScreen extends StatelessWidget {
             subtitle: 'Visitantes y contratistas guardados',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ExternosScreen()),
+            ),
+          ),
+          _AdminTile(
+            icon: Icons.school,
+            title: 'Capacitaciones',
+            subtitle: 'Crear y cerrar sesiones de formacion',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CapacitacionesScreen()),
+            ),
+          ),
+          _AdminTile(
+            icon: Icons.fact_check,
+            title: 'Asistencia capacitaciones',
+            subtitle: 'Consultar asistentes y fotos',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AsistenciaCapScreen()),
             ),
           ),
           _AdminTile(

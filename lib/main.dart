@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'screens/home_screen.dart';
 import 'screens/admin/pin_screen.dart';
-import 'screens/asistencia/asistencia_screen.dart';
 import 'services/auth_service.dart';
 
 void main() async {
@@ -29,7 +29,7 @@ class ControlAsistenciaApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/': (_) => const AsistenciaScreen(),
+        '/': (_) => const HomeScreen(),
         '/admin-pin': (_) => const PinScreen(),
       },
     );

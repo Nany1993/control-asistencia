@@ -1,14 +1,14 @@
 # Control Asistencia
 
-App Android offline para control de asistencia con foto, entrada/salida, turnos y modulo administrador protegido con PIN.
+App Android offline para control de asistencia con foto, entrada/salida, turnos, capacitaciones y modulo administrador protegido con PIN.
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.4.0
+**Version actual:** 1.5.0
 
 ## Funciones
 
-### Asistencia (pantalla principal)
+### Asistencia laboral (pestaña Turno)
 
 - Flujo: empresa → persona → tipo (entrada/salida) → foto → guardar.
 - Pestañas **Internos** y **Externos** con busqueda por nombre o documento.
@@ -30,6 +30,18 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos 
 - Si sale dentro del **horario de almuerzo** del turno, se registra como almuerzo automaticamente.
 - Al **volver de almuerzo**, indica cuanto se demoro (y exceso sobre el horario del turno, si aplica).
 
+### Capacitaciones (pestaña Capacitacion)
+
+- CRUD en admin: nombre, temas tratados, expositor, fecha, empresa opcional.
+- **Foto general opcional** de la sesion.
+- Marcacion de asistencia con **foto obligatoria** por persona (internos/externos).
+- Solo se puede marcar el **dia programado** de la capacitacion.
+- **Cierre automatico** al pasar la fecha:
+  - Con asistentes → **Ejecutada**
+  - Sin asistentes → **No ejecutada**
+- Cierre manual desde admin.
+- Export **informe PDF** (portada, listado, fotos individuales, foto grupal si existe) y CSV opcional.
+
 ### Externos
 
 - Personas externas separadas de internos (CRUD propio).
@@ -38,11 +50,11 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos 
 
 ### Administracion (PIN)
 
-Menu: Empresas → Turnos → Empleados → Externos → Registros → Exportar → Modificar PIN.
+Menu: Empresas → Turnos → Empleados → Externos → Capacitaciones → Asistencia capacitaciones → Registros → Exportar → Modificar PIN.
 
-- CRUD de empresas, empleados internos, externos y turnos.
-- Ver registros con filtros y fotos.
-- Exportar CSV con motivo de salida, radicado y observaciones.
+- CRUD de empresas, empleados internos, externos, turnos y capacitaciones.
+- Ver registros y asistencias a capacitaciones con fotos.
+- Exportar CSV de asistencia laboral e informe PDF/CSV de capacitaciones.
 - Cambiar PIN de administrador.
 
 ### General
@@ -100,18 +112,19 @@ build\app\outputs\flutter-apk\app-release.apk
 
 ## Uso rapido
 
-1. Toque el icono de administrador (esquina superior derecha en Asistencia).
+1. Toque el icono de administrador (esquina superior derecha).
 2. Ingrese PIN `1957` (o el PIN configurado).
-3. Cree una **empresa**, sus **turnos** (internos) y **empleados** o **externos**.
-4. Vuelva a Asistencia y registre marcaciones.
+3. Cree una **empresa**, **turnos**, **empleados** o **externos**, y **capacitaciones** si aplica.
+4. En la pantalla principal use **Turno** o **Capacitacion** segun corresponda.
 
 ## Exportar reportes
 
-Admin → Exportar → Generar CSV o Generar y compartir (WhatsApp, Drive, etc.).
+Admin → Exportar:
 
-Columnas del CSV: empresa, tipo persona, empleado, turno, documento, fecha, hora, tipo marcacion, motivo salida, radicado, observacion, ruta foto.
+- **Asistencia laboral:** CSV
+- **Capacitaciones:** informe PDF (recomendado para SST) o CSV
 
-Los archivos CSV se guardan en la carpeta interna `exportes` de la app.
+Los archivos se guardan en la carpeta interna `exportes` de la app.
 
 ## Contribuir / mejoras
 
@@ -124,5 +137,5 @@ git push
 ## Notas
 
 - La hora de marcacion usa el reloj del dispositivo.
-- Al eliminar una empresa se borran sus empleados, turnos y registros.
+- Al eliminar una empresa se borran sus empleados, turnos, registros y capacitaciones asociadas.
 - El APK generado localmente no se sube al repositorio (ver `.gitignore`).

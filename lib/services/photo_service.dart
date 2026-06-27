@@ -20,4 +20,34 @@ class PhotoService {
     await source.copy(destination.path);
     return destination.path;
   }
+
+  Future<String> saveCapacitacionGeneralPhoto(File source, int capacitacionId) async {
+    return _saveInSubdir(source, 'fotos_capacitaciones', 'cap${capacitacionId}_general');
+  }
+
+  Future<String> saveCapacitacionAsistenciaPhoto(
+    File source,
+    int capacitacionId,
+    int empleadoId,
+  ) async {
+    return _saveInSubdir(
+      source,
+      'fotos_capacitaciones',
+      'cap${capacitacionId}_emp${empleadoId}',
+    );
+  }
+
+  Future<String> _saveInSubdir(File source, String subdir, String prefix) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final photosDir = Directory(p.join(appDir.path, subdir));
+    if (!await photosDir.exists()) {
+      await photosDir.create(recursive: true);
+    }
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final fileName = '${prefix}_$timestamp.jpg';
+    final destination = File(p.join(photosDir.path, fileName));
+    await source.copy(destination.path);
+    return destination.path;
+  }
 }

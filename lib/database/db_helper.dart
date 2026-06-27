@@ -1,6 +1,8 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../models/asistencia_capacitacion.dart';
+import '../models/capacitacion.dart';
 import '../models/empleado.dart';
 import '../models/empresa.dart';
 import '../models/registro.dart';
@@ -24,7 +26,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -75,6 +77,9 @@ class DbHelper {
           await db.execute(
             'ALTER TABLE registros ADD COLUMN radicado TEXT',
           );
+        }
+        if (oldVersion < 6) {
+          await _createCapacitacionTables(db);
         }
       },
     );
@@ -137,6 +142,39 @@ class DbHelper {
       CREATE TABLE config (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
+      )
+    ''');
+    await _createCapacitacionTables(db);
+  }
+
+  Future<void> _createCapacitacionTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS capacitaciones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        temas TEXT NOT NULL,
+        expositor TEXT NOT NULL,
+        fecha TEXT NOT NULL,
+        empresa_id INTEGER,
+        foto_general_path TEXT,
+        activa INTEGER NOT NULL DEFAULT 1,
+        resultado TEXT,
+        cerrada_en TEXT,
+        cierre_automatico INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS asistencia_capacitacion (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        capacitacion_id INTEGER NOT NULL,
+        empleado_id INTEGER NOT NULL,
+        fecha_hora TEXT NOT NULL,
+        foto_path TEXT NOT NULL,
+        FOREIGN KEY (capacitacion_id) REFERENCES capacitaciones(id),
+        FOREIGN KEY (empleado_id) REFERENCES empleados(id),
+        UNIQUE(capacitacion_id, empleado_id)
       )
     ''');
   }
@@ -216,6 +254,15 @@ class DbHelper {
 
   Future<void> deleteEmpresa(int id) async {
     final db = await database;
+    final caps = await db.query(
+      'capacitaciones',
+      columns: ['id'],
+      where: 'empresa_id = ?',
+      whereArgs: [id],
+    );
+    for (final row in caps) {
+      await deleteCapacitacion(row['id'] as int);
+    }
     await db.delete('empresas', where: 'id = ?', whereArgs: [id]);
     await db.delete('turnos', where: 'empresa_id = ?', whereArgs: [id]);
     await db.delete('empleados', where: 'empresa_id = ?', whereArgs: [id]);
@@ -393,5 +440,151 @@ class DbHelper {
     ''', args);
 
     return rows.map(Registro.fromMap).toList();
+  }
+
+  static const _capacitacionSelect = '''
+      SELECT c.*,
+             emp.nombre AS empresa_nombre,
+             (SELECT COUNT(*) FROM asistencia_capacitacion ac
+              WHERE ac.capacitacion_id = c.id) AS total_asistentes
+      FROM capacitaciones c
+      LEFT JOIN empresas emp ON emp.id = c.empresa_id
+  ''';
+
+  static const _asistenciaCapSelect = '''
+      SELECT ac.*,
+             e.nombre AS empleado_nombre,
+             e.tipo_documento AS empleado_tipo_documento,
+             e.numero_documento AS empleado_numero_documento,
+             e.es_externo AS empleado_es_externo,
+             emp.nombre AS empresa_nombre,
+             cap.nombre AS capacitacion_nombre
+      FROM asistencia_capacitacion ac
+      JOIN empleados e ON e.id = ac.empleado_id
+      JOIN empresas emp ON emp.id = e.empresa_id
+      JOIN capacitaciones cap ON cap.id = ac.capacitacion_id
+  ''';
+
+  Future<List<Capacitacion>> getCapacitaciones({
+    bool? soloAbiertas,
+    bool? soloHoy,
+    int? empresaId,
+  }) async {
+    final db = await database;
+    final filters = <String>[];
+    final args = <Object>[];
+
+    if (soloAbiertas == true) {
+      filters.add('c.activa = 1');
+    }
+    if (soloHoy == true) {
+      filters.add('c.fecha = ?');
+      args.add(Capacitacion.dateKey(DateTime.now()));
+    }
+    if (empresaId != null) {
+      filters.add('(c.empresa_id = ? OR c.empresa_id IS NULL)');
+      args.add(empresaId);
+    }
+
+    final where = filters.isEmpty ? '' : 'WHERE ${filters.join(' AND ')}';
+    final rows = await db.rawQuery('''
+      $_capacitacionSelect
+      $where
+      ORDER BY c.fecha DESC, c.nombre COLLATE NOCASE ASC
+    ''', args);
+    return rows.map(Capacitacion.fromMap).toList();
+  }
+
+  Future<Capacitacion?> getCapacitacion(int id) async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      '$_capacitacionSelect WHERE c.id = ?',
+      [id],
+    );
+    if (rows.isEmpty) return null;
+    return Capacitacion.fromMap(rows.first);
+  }
+
+  Future<int> insertCapacitacion(Capacitacion capacitacion) async {
+    final db = await database;
+    return db.insert('capacitaciones', capacitacion.toMap()..remove('id'));
+  }
+
+  Future<void> updateCapacitacion(Capacitacion capacitacion) async {
+    final db = await database;
+    await db.update(
+      'capacitaciones',
+      capacitacion.toMap()..remove('id'),
+      where: 'id = ?',
+      whereArgs: [capacitacion.id],
+    );
+  }
+
+  Future<void> deleteCapacitacion(int id) async {
+    final db = await database;
+    await db.delete(
+      'asistencia_capacitacion',
+      where: 'capacitacion_id = ?',
+      whereArgs: [id],
+    );
+    await db.delete('capacitaciones', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> countAsistenciaCapacitacion(int capacitacionId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM asistencia_capacitacion WHERE capacitacion_id = ?',
+      [capacitacionId],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<bool> empleadoYaAsistioCapacitacion(
+    int capacitacionId,
+    int empleadoId,
+  ) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM asistencia_capacitacion '
+      'WHERE capacitacion_id = ? AND empleado_id = ?',
+      [capacitacionId, empleadoId],
+    );
+    return (Sqflite.firstIntValue(result) ?? 0) > 0;
+  }
+
+  Future<int> insertAsistenciaCapacitacion(
+    AsistenciaCapacitacion asistencia,
+  ) async {
+    final db = await database;
+    return db.insert(
+      'asistencia_capacitacion',
+      asistencia.toMap()..remove('id'),
+    );
+  }
+
+  Future<List<AsistenciaCapacitacion>> getAsistenciasCapacitacion({
+    int? capacitacionId,
+    int? empleadoId,
+  }) async {
+    final db = await database;
+    final filters = <String>[];
+    final args = <Object>[];
+
+    if (capacitacionId != null) {
+      filters.add('ac.capacitacion_id = ?');
+      args.add(capacitacionId);
+    }
+    if (empleadoId != null) {
+      filters.add('ac.empleado_id = ?');
+      args.add(empleadoId);
+    }
+
+    final where = filters.isEmpty ? '' : 'WHERE ${filters.join(' AND ')}';
+    final rows = await db.rawQuery('''
+      $_asistenciaCapSelect
+      $where
+      ORDER BY ac.fecha_hora ASC
+    ''', args);
+    return rows.map(AsistenciaCapacitacion.fromMap).toList();
   }
 }
