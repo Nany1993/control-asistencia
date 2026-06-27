@@ -1,0 +1,45 @@
+class Empresa {
+  const Empresa({
+    this.id,
+    required this.nombre,
+    this.activa = true,
+    required this.createdAt,
+  });
+
+  final int? id;
+  final String nombre;
+  final bool activa;
+  final DateTime createdAt;
+
+  Empresa copyWith({
+    int? id,
+    String? nombre,
+    bool? activa,
+    DateTime? createdAt,
+  }) {
+    return Empresa(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      activa: activa ?? this.activa,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, Object?> toMap() {
+    return {
+      'id': id,
+      'nombre': nombre,
+      'activa': activa ? 1 : 0,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  factory Empresa.fromMap(Map<String, Object?> map) {
+    return Empresa(
+      id: map['id'] as int?,
+      nombre: map['nombre'] as String,
+      activa: (map['activa'] as int) == 1,
+      createdAt: DateTime.parse(map['created_at'] as String),
+    );
+  }
+}

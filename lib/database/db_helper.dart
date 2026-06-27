@@ -1,0 +1,397 @@
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
+import '../models/empleado.dart';
+import '../models/empresa.dart';
+import '../models/registro.dart';
+import '../models/turno.dart';
+
+class DbHelper {
+  DbHelper._();
+  static final DbHelper instance = DbHelper._();
+
+  Database? _db;
+
+  Future<Database> get database async {
+    if (_db != null) return _db!;
+    _db = await _open();
+    return _db!;
+  }
+
+  Future<Database> _open() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'control_asistencia.db');
+
+    return openDatabase(
+      path,
+      version: 5,
+      onCreate: (db, version) async {
+        await _createTables(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(
+            "ALTER TABLE empleados ADD COLUMN tipo_documento TEXT NOT NULL DEFAULT 'CC'",
+          );
+          await db.execute(
+            "ALTER TABLE empleados ADD COLUMN numero_documento TEXT NOT NULL DEFAULT ''",
+          );
+        }
+        if (oldVersion < 3) {
+          await db.execute(
+            'ALTER TABLE empleados ADD COLUMN es_externo INTEGER NOT NULL DEFAULT 0',
+          );
+        }
+        if (oldVersion < 4) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS turnos (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              empresa_id INTEGER NOT NULL,
+              nombre TEXT NOT NULL,
+              hora_entrada TEXT NOT NULL,
+              hora_salida TEXT NOT NULL,
+              tolerancia_minutos INTEGER NOT NULL DEFAULT 15,
+              dias_semana TEXT NOT NULL DEFAULT '1,2,3,4,5',
+              FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+            )
+          ''');
+          await db.execute(
+            'ALTER TABLE empleados ADD COLUMN turno_id INTEGER',
+          );
+          await db.execute(
+            'ALTER TABLE registros ADD COLUMN observacion TEXT',
+          );
+        }
+        if (oldVersion < 5) {
+          await db.execute(
+            'ALTER TABLE turnos ADD COLUMN hora_almuerzo_inicio TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE turnos ADD COLUMN hora_almuerzo_fin TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE registros ADD COLUMN motivo_salida TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE registros ADD COLUMN radicado TEXT',
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _createTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE empresas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        activa INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE turnos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        empresa_id INTEGER NOT NULL,
+        nombre TEXT NOT NULL,
+        hora_entrada TEXT NOT NULL,
+        hora_salida TEXT NOT NULL,
+        tolerancia_minutos INTEGER NOT NULL DEFAULT 15,
+        dias_semana TEXT NOT NULL DEFAULT '1,2,3,4,5',
+        hora_almuerzo_inicio TEXT,
+        hora_almuerzo_fin TEXT,
+        FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE empleados (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        empresa_id INTEGER NOT NULL,
+        nombre TEXT NOT NULL,
+        tipo_documento TEXT NOT NULL DEFAULT 'CC',
+        numero_documento TEXT NOT NULL DEFAULT '',
+        es_externo INTEGER NOT NULL DEFAULT 0,
+        turno_id INTEGER,
+        activo INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (empresa_id) REFERENCES empresas(id),
+        FOREIGN KEY (turno_id) REFERENCES turnos(id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE registros (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        empresa_id INTEGER NOT NULL,
+        empleado_id INTEGER NOT NULL,
+        tipo TEXT NOT NULL,
+        fecha_hora TEXT NOT NULL,
+        foto_path TEXT NOT NULL,
+        observacion TEXT,
+        motivo_salida TEXT,
+        radicado TEXT,
+        FOREIGN KEY (empresa_id) REFERENCES empresas(id),
+        FOREIGN KEY (empleado_id) REFERENCES empleados(id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE config (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+  }
+
+  static const _registroSelect = '''
+      SELECT r.*,
+             e.nombre AS empleado_nombre,
+             e.tipo_documento AS empleado_tipo_documento,
+             e.numero_documento AS empleado_numero_documento,
+             e.es_externo AS empleado_es_externo,
+             emp.nombre AS empresa_nombre,
+             t.nombre AS turno_nombre
+      FROM registros r
+      JOIN empleados e ON e.id = r.empleado_id
+      JOIN empresas emp ON emp.id = r.empresa_id
+      LEFT JOIN turnos t ON t.id = e.turno_id
+  ''';
+
+  static const _empleadoSelect = '''
+      SELECT e.*, t.nombre AS turno_nombre
+      FROM empleados e
+      LEFT JOIN turnos t ON t.id = e.turno_id
+  ''';
+
+  Future<String?> getConfig(String key) async {
+    final db = await database;
+    final rows = await db.query(
+      'config',
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['value'] as String;
+  }
+
+  Future<void> setConfig(String key, String value) async {
+    final db = await database;
+    await db.insert(
+      'config',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Empresa>> getEmpresas({bool soloActivas = false}) async {
+    final db = await database;
+    final rows = await db.query(
+      'empresas',
+      where: soloActivas ? 'activa = 1' : null,
+      orderBy: 'nombre COLLATE NOCASE ASC',
+    );
+    return rows.map(Empresa.fromMap).toList();
+  }
+
+  Future<Empresa?> getEmpresa(int id) async {
+    final db = await database;
+    final rows = await db.query('empresas', where: 'id = ?', whereArgs: [id]);
+    if (rows.isEmpty) return null;
+    return Empresa.fromMap(rows.first);
+  }
+
+  Future<int> insertEmpresa(Empresa empresa) async {
+    final db = await database;
+    return db.insert('empresas', empresa.toMap()..remove('id'));
+  }
+
+  Future<void> updateEmpresa(Empresa empresa) async {
+    final db = await database;
+    await db.update(
+      'empresas',
+      empresa.toMap()..remove('id'),
+      where: 'id = ?',
+      whereArgs: [empresa.id],
+    );
+  }
+
+  Future<void> deleteEmpresa(int id) async {
+    final db = await database;
+    await db.delete('empresas', where: 'id = ?', whereArgs: [id]);
+    await db.delete('turnos', where: 'empresa_id = ?', whereArgs: [id]);
+    await db.delete('empleados', where: 'empresa_id = ?', whereArgs: [id]);
+    await db.delete('registros', where: 'empresa_id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Turno>> getTurnos({int? empresaId}) async {
+    final db = await database;
+    final rows = await db.query(
+      'turnos',
+      where: empresaId != null ? 'empresa_id = ?' : null,
+      whereArgs: empresaId != null ? [empresaId] : null,
+      orderBy: 'nombre COLLATE NOCASE ASC',
+    );
+    return rows.map(Turno.fromMap).toList();
+  }
+
+  Future<Turno?> getTurno(int id) async {
+    final db = await database;
+    final rows = await db.query('turnos', where: 'id = ?', whereArgs: [id]);
+    if (rows.isEmpty) return null;
+    return Turno.fromMap(rows.first);
+  }
+
+  Future<int> insertTurno(Turno turno) async {
+    final db = await database;
+    return db.insert('turnos', turno.toMap()..remove('id'));
+  }
+
+  Future<void> updateTurno(Turno turno) async {
+    final db = await database;
+    await db.update(
+      'turnos',
+      turno.toMap()..remove('id'),
+      where: 'id = ?',
+      whereArgs: [turno.id],
+    );
+  }
+
+  Future<int> countEmpleadosConTurno(int turnoId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM empleados WHERE turno_id = ?',
+      [turnoId],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<void> deleteTurno(int id) async {
+    final db = await database;
+    await db.update(
+      'empleados',
+      {'turno_id': null},
+      where: 'turno_id = ?',
+      whereArgs: [id],
+    );
+    await db.delete('turnos', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Empleado>> getEmpleados({
+    int? empresaId,
+    bool soloActivos = false,
+    bool? esExterno,
+  }) async {
+    final db = await database;
+    final filters = <String>[];
+    final args = <Object>[];
+
+    if (empresaId != null) {
+      filters.add('e.empresa_id = ?');
+      args.add(empresaId);
+    }
+    if (soloActivos) {
+      filters.add('e.activo = 1');
+    }
+    if (esExterno != null) {
+      filters.add('e.es_externo = ?');
+      args.add(esExterno ? 1 : 0);
+    }
+
+    final where = filters.isEmpty ? '' : 'WHERE ${filters.join(' AND ')}';
+    final rows = await db.rawQuery('''
+      $_empleadoSelect
+      $where
+      ORDER BY e.nombre COLLATE NOCASE ASC
+    ''', args);
+    return rows.map(Empleado.fromMap).toList();
+  }
+
+  Future<Empleado?> getEmpleado(int id) async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      '$_empleadoSelect WHERE e.id = ?',
+      [id],
+    );
+    if (rows.isEmpty) return null;
+    return Empleado.fromMap(rows.first);
+  }
+
+  Future<int> insertEmpleado(Empleado empleado) async {
+    final db = await database;
+    return db.insert('empleados', empleado.toMap()..remove('id'));
+  }
+
+  Future<void> updateEmpleado(Empleado empleado) async {
+    final db = await database;
+    await db.update(
+      'empleados',
+      empleado.toMap()..remove('id'),
+      where: 'id = ?',
+      whereArgs: [empleado.id],
+    );
+  }
+
+  Future<void> deleteEmpleado(int id) async {
+    final db = await database;
+    await db.delete('empleados', where: 'id = ?', whereArgs: [id]);
+    await db.delete('registros', where: 'empleado_id = ?', whereArgs: [id]);
+  }
+
+  Future<int> insertRegistro(Registro registro) async {
+    final db = await database;
+    return db.insert('registros', registro.toMap()..remove('id'));
+  }
+
+  Future<Registro?> getUltimoRegistroEmpleado(int empleadoId) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      $_registroSelect
+      WHERE r.empleado_id = ?
+      ORDER BY r.fecha_hora DESC
+      LIMIT 1
+    ''', [empleadoId]);
+    if (rows.isEmpty) return null;
+    return Registro.fromMap(rows.first);
+  }
+
+  Future<List<Registro>> getRegistros({
+    int? empresaId,
+    int? empleadoId,
+    bool? esExterno,
+    DateTime? desde,
+    DateTime? hasta,
+  }) async {
+    final db = await database;
+    final filters = <String>[];
+    final args = <Object>[];
+
+    if (empresaId != null) {
+      filters.add('r.empresa_id = ?');
+      args.add(empresaId);
+    }
+    if (empleadoId != null) {
+      filters.add('r.empleado_id = ?');
+      args.add(empleadoId);
+    }
+    if (esExterno != null) {
+      filters.add('e.es_externo = ?');
+      args.add(esExterno ? 1 : 0);
+    }
+    if (desde != null) {
+      filters.add('r.fecha_hora >= ?');
+      args.add(desde.toIso8601String());
+    }
+    if (hasta != null) {
+      filters.add('r.fecha_hora <= ?');
+      args.add(hasta.toIso8601String());
+    }
+
+    final where = filters.isEmpty ? '' : 'WHERE ${filters.join(' AND ')}';
+    final rows = await db.rawQuery('''
+      $_registroSelect
+      $where
+      ORDER BY r.fecha_hora DESC
+    ''', args);
+
+    return rows.map(Registro.fromMap).toList();
+  }
+}

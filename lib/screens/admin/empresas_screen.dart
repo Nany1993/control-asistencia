@@ -1,0 +1,167 @@
+import 'package:flutter/material.dart';
+
+import '../../database/db_helper.dart';
+import '../../models/empresa.dart';
+
+class EmpresasScreen extends StatefulWidget {
+  const EmpresasScreen({super.key});
+
+  @override
+  State<EmpresasScreen> createState() => _EmpresasScreenState();
+}
+
+class _EmpresasScreenState extends State<EmpresasScreen> {
+  List<Empresa> _empresas = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final data = await DbHelper.instance.getEmpresas();
+    if (mounted) {
+      setState(() {
+        _empresas = data;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _openForm([Empresa? empresa]) async {
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (_) => _EmpresaFormDialog(empresa: empresa),
+    );
+    if (saved == true) await _load();
+  }
+
+  Future<void> _delete(Empresa empresa) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar empresa'),
+        content: Text(
+          'Se eliminaran empleados y registros de "${empresa.nombre}". Continuar?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await DbHelper.instance.deleteEmpresa(empresa.id!);
+      await _load();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Empresas')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openForm(),
+        icon: const Icon(Icons.add),
+        label: const Text('Nueva'),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _empresas.isEmpty
+              ? const Center(child: Text('No hay empresas registradas'))
+              : ListView.builder(
+                  itemCount: _empresas.length,
+                  itemBuilder: (context, index) {
+                    final empresa = _empresas[index];
+                    return ListTile(
+                      title: Text(empresa.nombre),
+                      subtitle: Text(empresa.activa ? 'Activa' : 'Inactiva'),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'edit') _openForm(empresa);
+                          if (value == 'delete') _delete(empresa);
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: Text('Editar')),
+                          PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+class _EmpresaFormDialog extends StatefulWidget {
+  const _EmpresaFormDialog({this.empresa});
+
+  final Empresa? empresa;
+
+  @override
+  State<_EmpresaFormDialog> createState() => _EmpresaFormDialogState();
+}
+
+class _EmpresaFormDialogState extends State<_EmpresaFormDialog> {
+  late final TextEditingController _nombre;
+  late bool _activa;
+
+  @override
+  void initState() {
+    super.initState();
+    _nombre = TextEditingController(text: widget.empresa?.nombre ?? '');
+    _activa = widget.empresa?.activa ?? true;
+  }
+
+  @override
+  void dispose() {
+    _nombre.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final nombre = _nombre.text.trim();
+    if (nombre.isEmpty) return;
+
+    if (widget.empresa == null) {
+      await DbHelper.instance.insertEmpresa(
+        Empresa(nombre: nombre, activa: _activa, createdAt: DateTime.now()),
+      );
+    } else {
+      await DbHelper.instance.updateEmpresa(
+        widget.empresa!.copyWith(nombre: nombre, activa: _activa),
+      );
+    }
+    if (mounted) Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.empresa == null ? 'Nueva empresa' : 'Editar empresa'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _nombre,
+            decoration: const InputDecoration(labelText: 'Nombre'),
+            autofocus: true,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Activa'),
+            value: _activa,
+            onChanged: (v) => setState(() => _activa = v),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+        FilledButton(onPressed: _save, child: const Text('Guardar')),
+      ],
+    );
+  }
+}
