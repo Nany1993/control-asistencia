@@ -184,7 +184,7 @@ class _PersonasAdminScreenState extends State<PersonasAdminScreen> {
                               ? '${persona.documentoLabel} · ${persona.activo ? 'Activo' : 'Inactivo'}'
                               : [
                                   persona.documentoLabel,
-                                  if (persona.turnoNombre != null) 'Turno: ${persona.turnoNombre}',
+                                  if (persona.turnosNombre != null) 'Turnos: ${persona.turnosNombre}',
                                   persona.activo ? 'Activo' : 'Inactivo',
                                 ].join(' · ');
                           return ListTile(
@@ -235,9 +235,10 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
   late int _empresaId;
   late String _tipoDocumento;
   late bool _activo;
-  int? _turnoId;
+  final Set<int> _turnoIds = {};
   List<Turno> _turnos = [];
   String? _error;
+  bool _loadingTurnos = true;
 
   @override
   void initState() {
@@ -247,20 +248,29 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
     _empresaId = widget.persona?.empresaId ?? widget.empresaIdInicial;
     _tipoDocumento = widget.persona?.tipoDocumento ?? TipoDocumento.cc.codigo;
     _activo = widget.persona?.activo ?? true;
-    _turnoId = widget.persona?.turnoId;
     if (!widget.esExterno) {
       _loadTurnos();
+    } else {
+      _loadingTurnos = false;
     }
   }
 
   Future<void> _loadTurnos() async {
+    setState(() => _loadingTurnos = true);
     final turnos = await DbHelper.instance.getTurnos(empresaId: _empresaId);
+    Set<int> seleccionados = {};
+    if (widget.persona?.id != null) {
+      seleccionados = (await DbHelper.instance.getTurnoIdsForEmpleado(
+        widget.persona!.id!,
+      )).toSet();
+    }
     if (mounted) {
       setState(() {
         _turnos = turnos;
-        if (_turnoId != null && !turnos.any((t) => t.id == _turnoId)) {
-          _turnoId = null;
-        }
+        _turnoIds
+          ..clear()
+          ..addAll(seleccionados.where((id) => turnos.any((t) => t.id == id)));
+        _loadingTurnos = false;
       });
     }
   }
@@ -280,10 +290,12 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
       setState(() => _error = 'Nombre y numero de documento son obligatorios');
       return;
     }
-    if (!widget.esExterno && _turnoId == null) {
-      setState(() => _error = 'Seleccione un turno para el empleado interno');
+    if (!widget.esExterno && _turnoIds.isEmpty) {
+      setState(() => _error = 'Seleccione al menos un turno');
       return;
     }
+
+    final turnoIds = _turnoIds.toList();
 
     if (widget.persona == null) {
       await DbHelper.instance.insertEmpleado(
@@ -293,10 +305,10 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
           tipoDocumento: _tipoDocumento,
           numeroDocumento: numero,
           esExterno: widget.esExterno,
-          turnoId: widget.esExterno ? null : _turnoId,
           activo: _activo,
           createdAt: DateTime.now(),
         ),
+        turnoIds: widget.esExterno ? null : turnoIds,
       );
     } else {
       await DbHelper.instance.updateEmpleado(
@@ -305,10 +317,9 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
           nombre: nombre,
           tipoDocumento: _tipoDocumento,
           numeroDocumento: numero,
-          turnoId: widget.esExterno ? null : _turnoId,
-          clearTurnoId: widget.esExterno,
           activo: _activo,
         ),
+        turnoIds: widget.esExterno ? [] : turnoIds,
       );
     }
     if (mounted) Navigator.pop(context, true);
@@ -379,27 +390,45 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
             ),
             if (!widget.esExterno) ...[
               const SizedBox(height: 12),
-              DropdownButtonFormField<int?>(
-                initialValue: _turnoId,
-                decoration: const InputDecoration(
-                  labelText: 'Turno',
-                  border: OutlineInputBorder(),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Turnos asignados *',
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
-                items: _turnos
-                    .map(
-                      (t) => DropdownMenuItem(
-                        value: t.id,
-                        child: Text(t.resumenLabel),
-                      ),
-                    )
-                    .toList(),
-                onChanged: _turnos.isEmpty ? null : (v) => setState(() => _turnoId = v),
               ),
-              if (_turnos.isEmpty)
+              if (_loadingTurnos)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: LinearProgressIndicator(),
+                )
+              else if (_turnos.isEmpty)
                 Text(
                   'Cree turnos en Admin → Turnos',
                   style: Theme.of(context).textTheme.bodySmall,
-                ),
+                )
+              else
+                ..._turnos.map((turno) {
+                  final selected = _turnoIds.contains(turno.id);
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    value: selected,
+                    title: Text(turno.nombre),
+                    subtitle: Text(
+                      '${turno.horarioLabel} · ${diasSemanaTexto(turno.diasSemana)}',
+                    ),
+                    onChanged: (v) {
+                      setState(() {
+                        if (v == true && turno.id != null) {
+                          _turnoIds.add(turno.id!);
+                        } else if (turno.id != null) {
+                          _turnoIds.remove(turno.id);
+                        }
+                      });
+                    },
+                  );
+                }),
             ],
             SwitchListTile(
               contentPadding: EdgeInsets.zero,

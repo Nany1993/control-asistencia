@@ -4,7 +4,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.5.0
+**Version actual:** 1.6.0
 
 ## Funciones
 
@@ -19,7 +19,8 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 - **Turnos** por empresa: hora entrada/salida, tolerancia, dias de la semana.
 - Horario de **almuerzo** opcional en el turno (inicio y fin).
-- Asignacion de turno a cada empleado interno.
+- Asignacion de **uno o varios turnos** a cada empleado interno (ej. lun-vie y sabado).
+- El sistema usa automaticamente el turno que corresponde al dia de la marcacion.
 - **Llegada tarde:** solo en la primera entrada del dia (respeta tolerancia del turno).
 - **Reingreso:** si ya entro y salio, al volver a entrar no se marca llegada tarde.
 - **Salida anticipada:** si sale antes del fin del turno, pide motivo:

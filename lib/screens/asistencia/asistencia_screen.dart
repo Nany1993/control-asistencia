@@ -34,6 +34,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
   Empleado? _empleado;
   TipoMarcacion? _tipo;
   Registro? _ultimoRegistro;
+  List<Turno> _turnosAsignados = [];
   Turno? _turno;
   File? _foto;
   bool _loading = true;
@@ -84,6 +85,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
       _personas = [];
       _tipo = null;
       _ultimoRegistro = null;
+      _turnosAsignados = [];
       _turno = null;
       _foto = null;
       _busqueda.clear();
@@ -98,6 +100,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
       _empleado = null;
       _tipo = null;
       _ultimoRegistro = null;
+      _turnosAsignados = [];
       _turno = null;
       _foto = null;
       _busqueda.clear();
@@ -122,17 +125,21 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
       _tipo = null;
       _foto = null;
       _ultimoRegistro = null;
+      _turnosAsignados = [];
       _turno = null;
     });
     final ultimo = await DbHelper.instance.getUltimoRegistroEmpleado(persona.id!);
-    Turno? turno;
-    if (!persona.esExterno && persona.turnoId != null) {
-      turno = await DbHelper.instance.getTurno(persona.turnoId!);
+    List<Turno> turnos = [];
+    Turno? turnoHoy;
+    if (!persona.esExterno) {
+      turnos = await DbHelper.instance.getTurnosForEmpleado(persona.id!);
+      turnoHoy = TurnoEvaluator.turnoParaFecha(turnos, DateTime.now());
     }
     if (mounted) {
       setState(() {
         _ultimoRegistro = ultimo;
-        _turno = turno;
+        _turnosAsignados = turnos;
+        _turno = turnoHoy;
         _tipo = MarcacionValidator.tipoPermitido(ultimo);
       });
     }
@@ -240,6 +247,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
           observacion: observacion,
           motivoSalida: motivoSalida?.value,
           radicado: radicado,
+          turnoId: _turno?.id,
         ),
       );
 
@@ -256,6 +264,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
           _empleado = null;
           _tipo = null;
           _ultimoRegistro = null;
+          _turnosAsignados = [];
           _turno = null;
           _foto = null;
           _busqueda.clear();
@@ -384,8 +393,8 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                                 ? persona.documentoLabel
                                 : [
                                     persona.documentoLabel,
-                                    if (persona.turnoNombre != null)
-                                      'Turno: ${persona.turnoNombre}',
+                                    if (persona.turnosNombre != null)
+                                      'Turnos: ${persona.turnosNombre}',
                                   ].join(' · ');
                             return Card(
                               color: selected ? Colors.blue.shade50 : null,
@@ -404,17 +413,29 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                           },
                         ),
                       ),
-                    if (_turno != null && !_esExterno) ...[
+                    if (_turnosAsignados.isNotEmpty && !_esExterno) ...[
                       const SizedBox(height: 8),
                       Card(
-                        color: Colors.blue.shade50,
+                        color: _turno != null ? Colors.blue.shade50 : Colors.orange.shade50,
                         child: Padding(
                           padding: const EdgeInsets.all(12),
-                          child: Text(
-                            'Turno: ${_turno!.nombre} (${_turno!.horarioLabel}) · '
-                            '${diasSemanaTexto(_turno!.diasSemana)}'
-                            '${_turno!.tieneHorarioAlmuerzo ? ' · Almuerzo ${_turno!.horaAlmuerzoInicio}-${_turno!.horaAlmuerzoFin}' : ''}',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_turno != null)
+                                Text(
+                                  'Turno de hoy: ${_turno!.nombre} (${_turno!.horarioLabel}) · '
+                                  '${diasSemanaTexto(_turno!.diasSemana)}'
+                                  '${_turno!.tieneHorarioAlmuerzo ? ' · Almuerzo ${_turno!.horaAlmuerzoInicio}-${_turno!.horaAlmuerzoFin}' : ''}',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                )
+                              else
+                                Text(
+                                  'Hoy no tiene turno asignado. Turnos: '
+                                  '${_turnosAsignados.map((t) => t.nombre).join(', ')}',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                            ],
                           ),
                         ),
                       ),

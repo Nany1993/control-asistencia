@@ -5,10 +5,20 @@ import '../models/turno.dart';
 class TurnoEvaluator {
   TurnoEvaluator._();
 
-  static bool aplicaHoy(Turno turno) {
+  static bool aplicaEnFecha(Turno turno, DateTime fechaHora) {
     final dias = turno.diasLista;
     if (dias.isEmpty) return true;
-    return dias.contains(DateTime.now().weekday);
+    return dias.contains(fechaHora.weekday);
+  }
+
+  static bool aplicaHoy(Turno turno) => aplicaEnFecha(turno, DateTime.now());
+
+  /// Turno asignado que corresponde al dia de [fechaHora].
+  static Turno? turnoParaFecha(List<Turno> turnos, DateTime fechaHora) {
+    for (final turno in turnos) {
+      if (aplicaEnFecha(turno, fechaHora)) return turno;
+    }
+    return null;
   }
 
   static DateTime _horaEnDia(DateTime fecha, String hhmm) {
@@ -90,7 +100,7 @@ class TurnoEvaluator {
     MotivoSalida? motivoSalida,
   }) {
     if (turno == null) return null;
-    if (!aplicaHoy(turno)) return 'Fuera de dias de turno';
+    if (!aplicaEnFecha(turno, fechaHora)) return 'Fuera de dias de turno';
 
     if (tipo == TipoMarcacion.entrada) {
       if (!esPrimeraEntradaDelDia(

@@ -8,10 +8,10 @@ class Empleado {
     required this.tipoDocumento,
     required this.numeroDocumento,
     this.esExterno = false,
-    this.turnoId,
+    this.turnoIds = const [],
     this.activo = true,
     required this.createdAt,
-    this.turnoNombre,
+    this.turnosNombre,
   });
 
   final int? id;
@@ -20,16 +20,19 @@ class Empleado {
   final String tipoDocumento;
   final String numeroDocumento;
   final bool esExterno;
-  final int? turnoId;
+  final List<int> turnoIds;
   final bool activo;
   final DateTime createdAt;
-  final String? turnoNombre;
+  final String? turnosNombre;
 
   String get documentoLabel => '$tipoDocumento $numeroDocumento';
 
   String get nombreConDocumento => '$nombre ($documentoLabel)';
 
   String get tipoPersonaLabel => esExterno ? 'Externo' : 'Interno';
+
+  /// Alias para compatibilidad con pantallas existentes.
+  String? get turnoNombre => turnosNombre;
 
   Empleado copyWith({
     int? id,
@@ -38,11 +41,10 @@ class Empleado {
     String? tipoDocumento,
     String? numeroDocumento,
     bool? esExterno,
-    int? turnoId,
-    bool clearTurnoId = false,
+    List<int>? turnoIds,
     bool? activo,
     DateTime? createdAt,
-    String? turnoNombre,
+    String? turnosNombre,
   }) {
     return Empleado(
       id: id ?? this.id,
@@ -51,10 +53,10 @@ class Empleado {
       tipoDocumento: tipoDocumento ?? this.tipoDocumento,
       numeroDocumento: numeroDocumento ?? this.numeroDocumento,
       esExterno: esExterno ?? this.esExterno,
-      turnoId: clearTurnoId ? null : (turnoId ?? this.turnoId),
+      turnoIds: turnoIds ?? this.turnoIds,
       activo: activo ?? this.activo,
       createdAt: createdAt ?? this.createdAt,
-      turnoNombre: turnoNombre ?? this.turnoNombre,
+      turnosNombre: turnosNombre ?? this.turnosNombre,
     );
   }
 
@@ -66,7 +68,7 @@ class Empleado {
       'tipo_documento': tipoDocumento,
       'numero_documento': numeroDocumento,
       'es_externo': esExterno ? 1 : 0,
-      'turno_id': turnoId,
+      'turno_id': null,
       'activo': activo ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
     };
@@ -80,10 +82,10 @@ class Empleado {
       tipoDocumento: (map['tipo_documento'] as String?) ?? TipoDocumento.cc.codigo,
       numeroDocumento: (map['numero_documento'] as String?) ?? '',
       esExterno: (map['es_externo'] as int?) == 1,
-      turnoId: map['turno_id'] as int?,
       activo: (map['activo'] as int) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
-      turnoNombre: map['turno_nombre'] as String?,
+      turnosNombre: (map['turnos_nombre'] as String?) ??
+          (map['turno_nombre'] as String?),
     );
   }
 }

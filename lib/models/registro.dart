@@ -25,6 +25,7 @@ class Registro {
     this.observacion,
     this.motivoSalida,
     this.radicado,
+    this.turnoId,
     this.empresaNombre,
     this.empleadoNombre,
     this.empleadoTipoDocumento,
@@ -42,6 +43,7 @@ class Registro {
   final String? observacion;
   final String? motivoSalida;
   final String? radicado;
+  final int? turnoId;
   final String? empresaNombre;
   final String? empleadoNombre;
   final String? empleadoTipoDocumento;
@@ -72,6 +74,7 @@ class Registro {
       'observacion': observacion,
       'motivo_salida': motivoSalida,
       'radicado': radicado,
+      'turno_id': turnoId,
     };
   }
 
@@ -86,6 +89,7 @@ class Registro {
       observacion: map['observacion'] as String?,
       motivoSalida: map['motivo_salida'] as String?,
       radicado: map['radicado'] as String?,
+      turnoId: map['turno_id'] as int?,
       empresaNombre: map['empresa_nombre'] as String?,
       empleadoNombre: map['empleado_nombre'] as String?,
       empleadoTipoDocumento: map['empleado_tipo_documento'] as String?,

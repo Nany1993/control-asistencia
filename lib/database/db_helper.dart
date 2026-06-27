@@ -26,7 +26,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -81,6 +81,16 @@ class DbHelper {
         if (oldVersion < 6) {
           await _createCapacitacionTables(db);
         }
+        if (oldVersion < 7) {
+          await _createEmpleadoTurnosTable(db);
+          await db.execute(
+            'ALTER TABLE registros ADD COLUMN turno_id INTEGER',
+          );
+          await db.execute('''
+            INSERT OR IGNORE INTO empleado_turnos (empleado_id, turno_id)
+            SELECT id, turno_id FROM empleados WHERE turno_id IS NOT NULL
+          ''');
+        }
       },
     );
   }
@@ -134,8 +144,10 @@ class DbHelper {
         observacion TEXT,
         motivo_salida TEXT,
         radicado TEXT,
+        turno_id INTEGER,
         FOREIGN KEY (empresa_id) REFERENCES empresas(id),
-        FOREIGN KEY (empleado_id) REFERENCES empleados(id)
+        FOREIGN KEY (empleado_id) REFERENCES empleados(id),
+        FOREIGN KEY (turno_id) REFERENCES turnos(id)
       )
     ''');
     await db.execute('''
@@ -145,6 +157,19 @@ class DbHelper {
       )
     ''');
     await _createCapacitacionTables(db);
+    await _createEmpleadoTurnosTable(db);
+  }
+
+  Future<void> _createEmpleadoTurnosTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS empleado_turnos (
+        empleado_id INTEGER NOT NULL,
+        turno_id INTEGER NOT NULL,
+        PRIMARY KEY (empleado_id, turno_id),
+        FOREIGN KEY (empleado_id) REFERENCES empleados(id) ON DELETE CASCADE,
+        FOREIGN KEY (turno_id) REFERENCES turnos(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _createCapacitacionTables(Database db) async {
@@ -190,13 +215,16 @@ class DbHelper {
       FROM registros r
       JOIN empleados e ON e.id = r.empleado_id
       JOIN empresas emp ON emp.id = r.empresa_id
-      LEFT JOIN turnos t ON t.id = e.turno_id
+      LEFT JOIN turnos t ON t.id = r.turno_id
   ''';
 
   static const _empleadoSelect = '''
-      SELECT e.*, t.nombre AS turno_nombre
+      SELECT e.*,
+             (SELECT GROUP_CONCAT(t.nombre, ', ')
+              FROM empleado_turnos et
+              JOIN turnos t ON t.id = et.turno_id
+              WHERE et.empleado_id = e.id) AS turnos_nombre
       FROM empleados e
-      LEFT JOIN turnos t ON t.id = e.turno_id
   ''';
 
   Future<String?> getConfig(String key) async {
@@ -305,7 +333,7 @@ class DbHelper {
   Future<int> countEmpleadosConTurno(int turnoId) async {
     final db = await database;
     final result = await db.rawQuery(
-      'SELECT COUNT(*) AS c FROM empleados WHERE turno_id = ?',
+      'SELECT COUNT(DISTINCT empleado_id) AS c FROM empleado_turnos WHERE turno_id = ?',
       [turnoId],
     );
     return Sqflite.firstIntValue(result) ?? 0;
@@ -313,6 +341,7 @@ class DbHelper {
 
   Future<void> deleteTurno(int id) async {
     final db = await database;
+    await db.delete('empleado_turnos', where: 'turno_id = ?', whereArgs: [id]);
     await db.update(
       'empleados',
       {'turno_id': null},
@@ -320,6 +349,51 @@ class DbHelper {
       whereArgs: [id],
     );
     await db.delete('turnos', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<int>> getTurnoIdsForEmpleado(int empleadoId) async {
+    final db = await database;
+    final rows = await db.query(
+      'empleado_turnos',
+      columns: ['turno_id'],
+      where: 'empleado_id = ?',
+      whereArgs: [empleadoId],
+      orderBy: 'turno_id ASC',
+    );
+    return rows.map((r) => r['turno_id'] as int).toList();
+  }
+
+  Future<List<Turno>> getTurnosForEmpleado(int empleadoId) async {
+    final db = await database;
+    final rows = await db.rawQuery('''
+      SELECT t.*
+      FROM empleado_turnos et
+      JOIN turnos t ON t.id = et.turno_id
+      WHERE et.empleado_id = ?
+      ORDER BY t.nombre COLLATE NOCASE ASC
+    ''', [empleadoId]);
+    return rows.map(Turno.fromMap).toList();
+  }
+
+  Future<void> setEmpleadoTurnos(int empleadoId, List<int> turnoIds) async {
+    final db = await database;
+    await db.delete(
+      'empleado_turnos',
+      where: 'empleado_id = ?',
+      whereArgs: [empleadoId],
+    );
+    for (final turnoId in turnoIds.toSet()) {
+      await db.insert('empleado_turnos', {
+        'empleado_id': empleadoId,
+        'turno_id': turnoId,
+      });
+    }
+    await db.update(
+      'empleados',
+      {'turno_id': turnoIds.isEmpty ? null : turnoIds.first},
+      where: 'id = ?',
+      whereArgs: [empleadoId],
+    );
   }
 
   Future<List<Empleado>> getEmpleados({
@@ -362,12 +436,16 @@ class DbHelper {
     return Empleado.fromMap(rows.first);
   }
 
-  Future<int> insertEmpleado(Empleado empleado) async {
+  Future<int> insertEmpleado(Empleado empleado, {List<int>? turnoIds}) async {
     final db = await database;
-    return db.insert('empleados', empleado.toMap()..remove('id'));
+    final id = await db.insert('empleados', empleado.toMap()..remove('id'));
+    if (turnoIds != null && turnoIds.isNotEmpty) {
+      await setEmpleadoTurnos(id, turnoIds);
+    }
+    return id;
   }
 
-  Future<void> updateEmpleado(Empleado empleado) async {
+  Future<void> updateEmpleado(Empleado empleado, {List<int>? turnoIds}) async {
     final db = await database;
     await db.update(
       'empleados',
@@ -375,10 +453,14 @@ class DbHelper {
       where: 'id = ?',
       whereArgs: [empleado.id],
     );
+    if (turnoIds != null) {
+      await setEmpleadoTurnos(empleado.id!, turnoIds);
+    }
   }
 
   Future<void> deleteEmpleado(int id) async {
     final db = await database;
+    await db.delete('empleado_turnos', where: 'empleado_id = ?', whereArgs: [id]);
     await db.delete('empleados', where: 'id = ?', whereArgs: [id]);
     await db.delete('registros', where: 'empleado_id = ?', whereArgs: [id]);
   }
