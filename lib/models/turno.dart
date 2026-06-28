@@ -10,6 +10,7 @@ class Turno {
     this.diasSemana = '1,2,3,4,5',
     this.horaAlmuerzoInicio,
     this.horaAlmuerzoFin,
+    this.turnoNocturno = false,
   });
 
   final int? id;
@@ -20,6 +21,17 @@ class Turno {
   final String diasSemana;
   final String? horaAlmuerzoInicio;
   final String? horaAlmuerzoFin;
+  final bool turnoNocturno;
+
+  bool get esNocturno {
+    if (turnoNocturno) return true;
+    return _minutosDesdeMedianoche(horaSalida) <= _minutosDesdeMedianoche(horaEntrada);
+  }
+
+  static int _minutosDesdeMedianoche(String hhmm) {
+    final partes = hhmm.split(':');
+    return int.parse(partes[0]) * 60 + int.parse(partes[1]);
+  }
 
   bool get tieneHorarioAlmuerzo =>
       horaAlmuerzoInicio != null &&
@@ -27,7 +39,12 @@ class Turno {
       horaAlmuerzoFin != null &&
       horaAlmuerzoFin!.isNotEmpty;
 
-  String get horarioLabel => '$horaEntrada - $horaSalida';
+  String get horarioLabel {
+    if (esNocturno) {
+      return '$horaEntrada - $horaSalida (dia sig.)';
+    }
+    return '$horaEntrada - $horaSalida';
+  }
 
   String get resumenLabel => '$nombre ($horarioLabel)';
 
@@ -46,6 +63,7 @@ class Turno {
     String? horaAlmuerzoInicio,
     String? horaAlmuerzoFin,
     bool clearAlmuerzo = false,
+    bool? turnoNocturno,
   }) {
     return Turno(
       id: id ?? this.id,
@@ -57,6 +75,7 @@ class Turno {
       horaAlmuerzoInicio:
           clearAlmuerzo ? null : (horaAlmuerzoInicio ?? this.horaAlmuerzoInicio),
       horaAlmuerzoFin: clearAlmuerzo ? null : (horaAlmuerzoFin ?? this.horaAlmuerzoFin),
+      turnoNocturno: turnoNocturno ?? this.turnoNocturno,
     );
   }
 
@@ -70,6 +89,7 @@ class Turno {
       'dias_semana': diasSemana,
       'hora_almuerzo_inicio': horaAlmuerzoInicio,
       'hora_almuerzo_fin': horaAlmuerzoFin,
+      'turno_nocturno': turnoNocturno ? 1 : 0,
     };
   }
 
@@ -83,6 +103,7 @@ class Turno {
       diasSemana: (map['dias_semana'] as String?) ?? '1,2,3,4,5',
       horaAlmuerzoInicio: map['hora_almuerzo_inicio'] as String?,
       horaAlmuerzoFin: map['hora_almuerzo_fin'] as String?,
+      turnoNocturno: (map['turno_nocturno'] as int?) == 1,
     );
   }
 }

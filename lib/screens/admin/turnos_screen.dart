@@ -109,6 +109,7 @@ class _TurnosScreenState extends State<TurnosScreen> {
                         subtitle: Text(
                           '${turno.horarioLabel} · Tol. ${turno.toleranciaMinutos} min · '
                           '${diasSemanaTexto(turno.diasSemana)}'
+                          '${turno.esNocturno ? ' · Nocturno' : ''}'
                           '${turno.tieneHorarioAlmuerzo ? ' · Almuerzo ${turno.horaAlmuerzoInicio}-${turno.horaAlmuerzoFin}' : ''}',
                         ),
                         trailing: PopupMenuButton<String>(
@@ -146,6 +147,7 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
   late TimeOfDay _almuerzoInicio;
   late TimeOfDay _almuerzoFin;
   late bool _definirAlmuerzo;
+  late bool _turnoNocturno;
   late Set<int> _dias;
   String? _error;
 
@@ -159,6 +161,7 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
     _entrada = _parseTime(widget.turno?.horaEntrada ?? '08:00');
     _salida = _parseTime(widget.turno?.horaSalida ?? '17:00');
     _definirAlmuerzo = widget.turno?.tieneHorarioAlmuerzo ?? false;
+    _turnoNocturno = widget.turno?.turnoNocturno ?? widget.turno?.esNocturno ?? false;
     _almuerzoInicio = _parseTime(widget.turno?.horaAlmuerzoInicio ?? '12:00');
     _almuerzoFin = _parseTime(widget.turno?.horaAlmuerzoFin ?? '13:00');
     _dias = widget.turno != null
@@ -180,6 +183,19 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
     _nombre.dispose();
     _tolerancia.dispose();
     super.dispose();
+  }
+
+  void _sugerirTurnoNocturno() {
+    final entrada = _formatTime(_entrada);
+    final salida = _formatTime(_salida);
+    final sugerido = Turno(
+      nombre: '',
+      horaEntrada: entrada,
+      horaSalida: salida,
+    ).esNocturno;
+    if (sugerido != _turnoNocturno) {
+      setState(() => _turnoNocturno = sugerido);
+    }
   }
 
   Future<void> _pickTime({
@@ -208,6 +224,7 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
             _almuerzoFin = picked;
         }
       });
+      _sugerirTurnoNocturno();
     }
   }
 
@@ -233,6 +250,7 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
       diasSemana: dias.join(','),
       horaAlmuerzoInicio: _definirAlmuerzo ? _formatTime(_almuerzoInicio) : null,
       horaAlmuerzoFin: _definirAlmuerzo ? _formatTime(_almuerzoFin) : null,
+      turnoNocturno: _turnoNocturno,
     );
 
     if (widget.turno == null) {
@@ -275,6 +293,16 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
                 icon: const Icon(Icons.access_time),
                 onPressed: () => _pickTime(tipo: 'salida'),
               ),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Turno nocturno'),
+              subtitle: const Text(
+                'La salida es al dia siguiente (ej. entra 17:00, sale 10:00). '
+                'No cierra el turno a medianoche.',
+              ),
+              value: _turnoNocturno,
+              onChanged: (v) => setState(() => _turnoNocturno = v),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,

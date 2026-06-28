@@ -35,6 +35,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
   Registro? _ultimoRegistro;
   List<Turno> _turnosAsignados = [];
   Turno? _turno;
+  Turno? _turnoEntradaPendiente;
   File? _foto;
   bool _loading = true;
   bool _saving = false;
@@ -175,30 +176,72 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
       _ultimoRegistro = null;
       _turnosAsignados = [];
       _turno = null;
+      _turnoEntradaPendiente = null;
     });
     final ultimo = await DbHelper.instance.getUltimoRegistroEmpleado(persona.id!);
     List<Turno> turnos = [];
+    Turno? turnoEntradaPendiente;
     Turno? turnoHoy;
     if (!persona.esExterno) {
       turnos = await DbHelper.instance.getTurnosForEmpleado(persona.id!);
-      turnoHoy = TurnoEvaluator.turnoParaFecha(turnos, DateTime.now());
+      if (ultimo?.tipo == TipoMarcacion.entrada) {
+        turnoEntradaPendiente = await _turnoParaEntradaPendiente(ultimo!, turnos);
+      }
+      turnoHoy = TurnoEvaluator.turnoParaMarcacion(
+        turnos,
+        ultimo,
+        DateTime.now(),
+        turnoEntradaPendiente: turnoEntradaPendiente,
+      );
     }
     if (mounted) {
       setState(() {
         _ultimoRegistro = ultimo;
         _turnosAsignados = turnos;
+        _turnoEntradaPendiente = turnoEntradaPendiente;
         _turno = turnoHoy;
-        _tipo = MarcacionValidator.tipoPermitido(ultimo);
+        _tipo = MarcacionValidator.tipoPermitido(
+          ultimo,
+          turno: turnoEntradaPendiente,
+        );
       });
     }
   }
 
+  Turno? get _turnoValidacion =>
+      _ultimoRegistro?.tipo == TipoMarcacion.entrada ? _turnoEntradaPendiente : null;
+
+  Future<Turno?> _turnoParaEntradaPendiente(
+    Registro entradaPendiente,
+    List<Turno> turnosAsignados,
+  ) async {
+    if (entradaPendiente.turnoId != null) {
+      final turno = await DbHelper.instance.getTurno(entradaPendiente.turnoId!);
+      if (turno != null) return turno;
+    }
+    if (turnosAsignados.isNotEmpty) {
+      return TurnoEvaluator.turnoParaFecha(
+        turnosAsignados,
+        entradaPendiente.fechaHora,
+      );
+    }
+    return null;
+  }
+
   void _seleccionarTipo(TipoMarcacion tipo) {
-    if (!MarcacionValidator.puedeMarcar(_ultimoRegistro, tipo)) {
+    if (!MarcacionValidator.puedeMarcar(
+      _ultimoRegistro,
+      tipo,
+      turno: _turnoValidacion,
+    )) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: InfoText(
-            MarcacionValidator.mensajeBloqueo(_ultimoRegistro, tipo),
+            MarcacionValidator.mensajeBloqueo(
+              _ultimoRegistro,
+              tipo,
+              turno: _turnoValidacion,
+            ),
           ),
         ),
       );
@@ -234,12 +277,17 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
 
   Future<Registro?> _cerrarEntradaPendienteSiAplica(DateTime ahora) async {
     if (_tipo != TipoMarcacion.entrada) return _ultimoRegistro;
-    if (!MarcacionValidator.requiereCierreSalidaPendiente(_ultimoRegistro, ahora: ahora)) {
-      return _ultimoRegistro;
-    }
 
     final entradaPendiente = _ultimoRegistro!;
     final turnoCierre = await _turnoParaCierre(entradaPendiente);
+    if (!MarcacionValidator.requiereCierreSalidaPendiente(
+      _ultimoRegistro,
+      ahora: ahora,
+      turno: turnoCierre,
+    )) {
+      return _ultimoRegistro;
+    }
+
     final salidaAuto = Registro(
       empresaId: entradaPendiente.empresaId,
       empleadoId: entradaPendiente.empleadoId,
@@ -269,11 +317,19 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
       return;
     }
 
-    if (!MarcacionValidator.puedeMarcar(_ultimoRegistro, _tipo!)) {
+    if (!MarcacionValidator.puedeMarcar(
+      _ultimoRegistro,
+      _tipo!,
+      turno: _turnoValidacion,
+    )) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            MarcacionValidator.mensajeBloqueo(_ultimoRegistro, _tipo!),
+            MarcacionValidator.mensajeBloqueo(
+              _ultimoRegistro,
+              _tipo!,
+              turno: _turnoValidacion,
+            ),
           ),
         ),
       );
@@ -301,7 +357,12 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
       if (!_esExterno &&
           _turno != null &&
           _tipo == TipoMarcacion.salida &&
-          TurnoEvaluator.esSalidaAnticipada(turno: _turno!, fechaHora: ahora)) {
+          TurnoEvaluator.esSalidaAnticipada(
+            turno: _turno!,
+            fechaHora: ahora,
+            entradaAbierta:
+                _ultimoRegistro?.tipo == TipoMarcacion.entrada ? _ultimoRegistro : null,
+          )) {
         setState(() => _saving = false);
         if (!mounted) return;
         final data = await showDialog<SalidaAnticipadaData>(
@@ -376,6 +437,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
           _ultimoRegistro = null;
           _turnosAsignados = [];
           _turno = null;
+          _turnoEntradaPendiente = null;
           _foto = null;
           _busqueda.clear();
         });
@@ -397,11 +459,19 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
       _tipo != null &&
       _foto != null &&
       !_saving &&
-      MarcacionValidator.puedeMarcar(_ultimoRegistro, _tipo!);
+      MarcacionValidator.puedeMarcar(
+        _ultimoRegistro,
+        _tipo!,
+        turno: _turnoValidacion,
+      );
 
   Widget _tipoButton(TipoMarcacion tipo) {
     final selected = _tipo == tipo;
-    final permitido = MarcacionValidator.puedeMarcar(_ultimoRegistro, tipo);
+    final permitido = MarcacionValidator.puedeMarcar(
+      _ultimoRegistro,
+      tipo,
+      turno: _turnoValidacion,
+    );
 
     return Expanded(
       child: Padding(
@@ -429,7 +499,10 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
   @override
   Widget build(BuildContext context) {
     final siguienteTipo = _empleado != null
-        ? MarcacionValidator.tipoPermitido(_ultimoRegistro)
+        ? MarcacionValidator.tipoPermitido(
+            _ultimoRegistro,
+            turno: _turnoValidacion,
+          )
         : null;
     final filtradas = _personasFiltradas;
     final buscando = _busqueda.text.trim().isNotEmpty;

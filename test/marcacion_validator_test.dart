@@ -42,7 +42,7 @@ void main() {
       );
     });
 
-    test('entrada de dia anterior permite nueva entrada hoy', () {
+    test('entrada de dia anterior permite nueva entrada hoy sin turno nocturno', () {
       final entradaAyer = Registro(
         empresaId: 1,
         empleadoId: 1,
@@ -62,7 +62,7 @@ void main() {
       );
     });
 
-    test('fecha cierre usa hora de salida del turno', () {
+    test('fecha cierre usa hora de salida del turno diurno', () {
       final entrada = Registro(
         empresaId: 1,
         empleadoId: 1,
@@ -82,6 +82,89 @@ void main() {
       );
 
       expect(cierre, DateTime(2026, 6, 26, 17, 0));
+    });
+
+    test('turno nocturno permite salida al dia siguiente antes de la hora fin', () {
+      const turno = Turno(
+        nombre: 'Vigilancia',
+        horaEntrada: '17:00',
+        horaSalida: '10:00',
+        turnoNocturno: true,
+        diasSemana: '1,2,3,4,5,6,7',
+      );
+      final entrada = Registro(
+        empresaId: 1,
+        empleadoId: 1,
+        tipo: TipoMarcacion.entrada,
+        fechaHora: DateTime(2026, 6, 29, 17),
+        fotoPath: 'foto.jpg',
+        turnoId: 1,
+      );
+      final martesManana = DateTime(2026, 6, 30, 8);
+
+      expect(
+        MarcacionValidator.tipoPermitido(
+          entrada,
+          ahora: martesManana,
+          turno: turno,
+        ),
+        TipoMarcacion.salida,
+      );
+      expect(
+        MarcacionValidator.requiereCierreSalidaPendiente(
+          entrada,
+          ahora: martesManana,
+          turno: turno,
+        ),
+        isFalse,
+      );
+      expect(
+        MarcacionValidator.puedeMarcar(
+          entrada,
+          TipoMarcacion.salida,
+          ahora: martesManana,
+          turno: turno,
+        ),
+        isTrue,
+      );
+    });
+
+    test('turno nocturno cierra automatico despues de la hora de salida', () {
+      const turno = Turno(
+        nombre: 'Vigilancia',
+        horaEntrada: '17:00',
+        horaSalida: '10:00',
+        turnoNocturno: true,
+      );
+      final entrada = Registro(
+        empresaId: 1,
+        empleadoId: 1,
+        tipo: TipoMarcacion.entrada,
+        fechaHora: DateTime(2026, 6, 29, 17),
+        fotoPath: 'foto.jpg',
+      );
+      final despuesDelTurno = DateTime(2026, 6, 30, 11);
+
+      expect(
+        MarcacionValidator.requiereCierreSalidaPendiente(
+          entrada,
+          ahora: despuesDelTurno,
+          turno: turno,
+        ),
+        isTrue,
+      );
+      expect(
+        MarcacionValidator.fechaCierreSalidaPendiente(entrada, turno: turno),
+        DateTime(2026, 6, 30, 10, 0),
+      );
+      expect(
+        MarcacionValidator.tipoPermitido(
+          entrada,
+          ahora: despuesDelTurno,
+          turno: turno,
+        ),
+        TipoMarcacion.entrada,
+      );
     });
   });
 
@@ -131,6 +214,67 @@ void main() {
       );
 
       expect(obs, contains('LLEGADA TARDE'));
+    });
+
+    test('detecta salida anticipada en turno nocturno', () {
+      const turno = Turno(
+        nombre: 'Vigilancia',
+        horaEntrada: '17:00',
+        horaSalida: '10:00',
+        turnoNocturno: true,
+      );
+      final entrada = Registro(
+        empresaId: 1,
+        empleadoId: 1,
+        tipo: TipoMarcacion.entrada,
+        fechaHora: DateTime(2026, 6, 29, 17),
+        fotoPath: 'foto.jpg',
+      );
+
+      expect(
+        TurnoEvaluator.esSalidaAnticipada(
+          turno: turno,
+          fechaHora: DateTime(2026, 6, 30, 9),
+          entradaAbierta: entrada,
+        ),
+        isTrue,
+      );
+      expect(
+        TurnoEvaluator.esSalidaAnticipada(
+          turno: turno,
+          fechaHora: DateTime(2026, 6, 30, 10),
+          entradaAbierta: entrada,
+        ),
+        isFalse,
+      );
+    });
+
+    test('turnoParaMarcacion mantiene turno nocturno abierto', () {
+      const turno = Turno(
+        id: 1,
+        nombre: 'Vigilancia',
+        horaEntrada: '17:00',
+        horaSalida: '10:00',
+        turnoNocturno: true,
+        diasSemana: '1,2,3,4,5,6,7',
+      );
+      final entrada = Registro(
+        empresaId: 1,
+        empleadoId: 1,
+        tipo: TipoMarcacion.entrada,
+        fechaHora: DateTime(2026, 6, 29, 17),
+        fotoPath: 'foto.jpg',
+        turnoId: 1,
+      );
+
+      final activo = TurnoEvaluator.turnoParaMarcacion(
+        [turno],
+        entrada,
+        DateTime(2026, 6, 30, 8),
+        turnoEntradaPendiente: turno,
+      );
+
+      expect(activo?.id, 1);
     });
   });
 }

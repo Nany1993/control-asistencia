@@ -41,7 +41,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 14,
+      version: 15,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -204,6 +204,16 @@ class DbHelper {
             "ALTER TABLE capacitaciones ADD COLUMN descripcion TEXT NOT NULL DEFAULT ''",
           );
         }
+        if (oldVersion < 15) {
+          await db.execute(
+            "ALTER TABLE turnos ADD COLUMN turno_nocturno INTEGER NOT NULL DEFAULT 0",
+          );
+          await db.execute('''
+            UPDATE turnos
+            SET turno_nocturno = 1
+            WHERE hora_salida <= hora_entrada
+          ''');
+        }
       },
     );
   }
@@ -227,7 +237,8 @@ class DbHelper {
         tolerancia_minutos INTEGER NOT NULL DEFAULT 15,
         dias_semana TEXT NOT NULL DEFAULT '1,2,3,4,5',
         hora_almuerzo_inicio TEXT,
-        hora_almuerzo_fin TEXT
+        hora_almuerzo_fin TEXT,
+        turno_nocturno INTEGER NOT NULL DEFAULT 0
       )
     ''');
     await db.execute('''
