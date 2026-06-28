@@ -5,6 +5,7 @@ import '../../database/db_helper.dart';
 import '../../models/capacitacion.dart';
 import '../../models/empresa.dart';
 import '../../services/capacitacion_export_service.dart';
+import '../../services/capacitacion_service.dart';
 import '../../services/export_service.dart';
 import '../../utils/persona_search.dart';
 
@@ -176,6 +177,48 @@ class _ExportScreenState extends State<ExportScreen> {
     }
   }
 
+  Future<bool> _asegurarCapacitacionCerradaParaPdf() async {
+    final cap = await DbHelper.instance.getCapacitacion(_capacitacionId!);
+    if (cap == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Capacitacion no encontrada')),
+        );
+      }
+      return false;
+    }
+    if (!cap.activa) return true;
+
+    if (!mounted) return false;
+    final cerrar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Capacitacion abierta'),
+        content: Text(
+          'La capacitacion "${cap.nombre}" aun esta abierta. '
+          'Para exportar el informe PDF debe cerrarla primero.\n\n'
+          '¿Desea cerrarla ahora? Se marcara como ejecutada o no ejecutada '
+          'segun las asistencias registradas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cerrar y exportar'),
+          ),
+        ],
+      ),
+    );
+    if (cerrar != true) return false;
+
+    await CapacitacionService.instance.cerrarCapacitacion(cap.id!);
+    await _load();
+    return true;
+  }
+
   Future<void> _exportCapacitacion({
     required bool pdf,
     bool share = false,
@@ -185,6 +228,11 @@ class _ExportScreenState extends State<ExportScreen> {
         const SnackBar(content: Text('Seleccione una capacitacion')),
       );
       return;
+    }
+
+    if (pdf) {
+      final puedeExportar = await _asegurarCapacitacionCerradaParaPdf();
+      if (!puedeExportar) return;
     }
 
     setState(() {

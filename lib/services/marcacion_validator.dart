@@ -63,7 +63,7 @@ class MarcacionValidator {
     return DateTime(dia.year, dia.month, dia.day, 23, 59, 59);
   }
 
-  static const observacionCierreAutomatico = 'No registro salida';
+  static const observacionCierreAutomatico = 'NO REGISTRO SALIDA';
 
   static String mensajeBloqueo(
     Registro? ultimo,

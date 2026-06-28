@@ -1,4 +1,5 @@
 import 'tipo_documento.dart';
+import '../utils/texto_display.dart';
 
 class Empleado {
   const Empleado({
@@ -33,7 +34,7 @@ class Empleado {
 
   String get nombreConDocumento => '$nombre ($documentoLabel)';
 
-  String get tipoPersonaLabel => esExterno ? 'Externo' : 'Interno';
+  String get tipoPersonaLabel => esExterno ? 'EXTERNO' : 'INTERNO';
 
   /// Alias para compatibilidad con pantallas existentes.
   String? get turnoNombre => turnosNombre;
@@ -72,10 +73,10 @@ class Empleado {
     return {
       'id': id,
       'empresa_id': empresaId,
-      'nombre': nombre,
-      'tipo_documento': tipoDocumento,
-      'numero_documento': numeroDocumento,
-      'cargo': cargo,
+      'nombre': TextoDisplay.mayus(nombre),
+      'tipo_documento': TextoDisplay.mayus(tipoDocumento),
+      'numero_documento': TextoDisplay.mayus(numeroDocumento),
+      'cargo': TextoDisplay.mayus(cargo),
       'es_externo': esExterno ? 1 : 0,
       'turno_id': null,
       'activo': activo ? 1 : 0,
@@ -87,16 +88,19 @@ class Empleado {
     return Empleado(
       id: map['id'] as int?,
       empresaId: map['empresa_id'] as int,
-      nombre: map['nombre'] as String,
-      tipoDocumento: (map['tipo_documento'] as String?) ?? TipoDocumento.cc.codigo,
-      numeroDocumento: (map['numero_documento'] as String?) ?? '',
-      cargo: (map['cargo'] as String?) ?? '',
+      nombre: TextoDisplay.mayus(map['nombre'] as String),
+      tipoDocumento: TextoDisplay.mayus(
+        (map['tipo_documento'] as String?) ?? TipoDocumento.cc.codigo,
+      ),
+      numeroDocumento: TextoDisplay.mayus((map['numero_documento'] as String?) ?? ''),
+      cargo: TextoDisplay.mayus((map['cargo'] as String?) ?? ''),
       esExterno: (map['es_externo'] as int?) == 1,
       activo: (map['activo'] as int) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
-      turnosNombre: (map['turnos_nombre'] as String?) ??
-          (map['turno_nombre'] as String?),
-      empresaNombre: map['empresa_nombre'] as String?,
+      turnosNombre: TextoDisplay.mayusOpcional(
+        (map['turnos_nombre'] as String?) ?? (map['turno_nombre'] as String?),
+      ),
+      empresaNombre: TextoDisplay.mayusOpcional(map['empresa_nombre'] as String?),
     );
   }
 }

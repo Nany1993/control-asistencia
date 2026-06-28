@@ -13,6 +13,7 @@ import '../../models/asistencia_capacitacion.dart';
 import '../../services/capacitacion_service.dart';
 import '../../services/photo_service.dart';
 import '../../utils/persona_search.dart';
+import '../../widgets/info_text.dart';
 
 class CapacitacionScreen extends StatefulWidget {
   const CapacitacionScreen({super.key});
@@ -327,7 +328,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           children: [
-            const _SectionTitle('1. Capacitacion'),
+            const SectionTitle('1. Capacitacion'),
             DropdownButtonFormField<Capacitacion>(
               initialValue: _capacitacion,
               decoration: const InputDecoration(
@@ -373,15 +374,15 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
               ),
             ],
             const SizedBox(height: 20),
-            const _SectionTitle('2. Persona'),
+            const SectionTitle('2. Persona'),
             PersonaSearchField(
               controller: _busqueda,
-              hintText: 'Escriba nombre, empresa, cargo o documento...',
+              hintText: 'ESCRIBA NOMBRE, EMPRESA, CARGO O DOCUMENTO...',
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 8),
             if (_capacitacion == null)
-              const Text('Seleccione una capacitacion primero')
+              const InfoText('Seleccione una capacitacion primero')
             else if (_empleado != null) ...[
               Card(
                 color: Colors.blue.shade50,
@@ -408,7 +409,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
                     ),
               )
             else if (filtradas.isEmpty)
-              const Text('Sin coincidencias')
+              const InfoText('Sin coincidencias')
             else ...[
               if (_hayMasCoincidencias)
                 Padding(
@@ -433,7 +434,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
               ),
             ],
             const SizedBox(height: 20),
-            const _SectionTitle('3. Foto'),
+            const SectionTitle('3. Foto'),
             if (_foto != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
@@ -468,28 +469,10 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.check),
-              label: const Text('Registrar asistencia'),
+              label: const InfoText('Registrar asistencia'),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/info_text.dart';
 import 'asistencia/asistencia_screen.dart';
 import 'capacitacion/capacitacion_screen.dart';
 
@@ -12,17 +13,17 @@ class HomeScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Control Asistencia'),
+          title: const InfoText('Control Asistencia'),
           bottom: const TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.badge), text: 'Turno'),
-              Tab(icon: Icon(Icons.school_outlined), text: 'Capacitacion'),
+              Tab(icon: Icon(Icons.badge), text: 'TURNO'),
+              Tab(icon: Icon(Icons.school_outlined), text: 'CAPACITACION'),
             ],
           ),
           actions: [
             IconButton(
               icon: const Icon(Icons.admin_panel_settings_outlined),
-              tooltip: 'Administracion',
+              tooltip: 'ADMINISTRACION',
               onPressed: () => Navigator.of(context).pushNamed('/admin-pin'),
             ),
           ],

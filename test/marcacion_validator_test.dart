@@ -130,7 +130,7 @@ void main() {
         ultimoRegistro: null,
       );
 
-      expect(obs, contains('Llegada tarde'));
+      expect(obs, contains('LLEGADA TARDE'));
     });
   });
 }

@@ -1,3 +1,5 @@
+import '../utils/texto_display.dart';
+
 class Empresa {
   const Empresa({
     this.id,
@@ -35,8 +37,8 @@ class Empresa {
   Map<String, Object?> toMap() {
     return {
       'id': id,
-      'nombre': nombre,
-      'nit': nit,
+      'nombre': TextoDisplay.mayus(nombre),
+      'nit': TextoDisplay.mayus(nit),
       'activa': activa ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
     };
@@ -45,8 +47,8 @@ class Empresa {
   factory Empresa.fromMap(Map<String, Object?> map) {
     return Empresa(
       id: map['id'] as int?,
-      nombre: map['nombre'] as String,
-      nit: (map['nit'] as String?) ?? '',
+      nombre: TextoDisplay.mayus(map['nombre'] as String),
+      nit: TextoDisplay.mayus((map['nit'] as String?) ?? ''),
       activa: (map['activa'] as int) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
     );

@@ -1,3 +1,5 @@
+import '../utils/texto_display.dart';
+
 class AsistenciaCapacitacion {
   const AsistenciaCapacitacion({
     this.id,
@@ -28,7 +30,7 @@ class AsistenciaCapacitacion {
   final String? capacitacionNombre;
 
   String get tipoPersonaLabel =>
-      (empleadoEsExterno ?? false) ? 'Externo' : 'Interno';
+      (empleadoEsExterno ?? false) ? 'EXTERNO' : 'INTERNO';
 
   String get documentoLabel =>
       '${empleadoTipoDocumento ?? ''} ${empleadoNumeroDocumento ?? ''}'.trim();
@@ -40,10 +42,10 @@ class AsistenciaCapacitacion {
       'empleado_id': empleadoId,
       'fecha_hora': fechaHora.toIso8601String(),
       'foto_path': fotoPath,
-      'empleado_cargo': empleadoCargo ?? '',
-      'empleado_nombre': empleadoNombre ?? '',
-      'empleado_tipo_documento': empleadoTipoDocumento ?? '',
-      'empleado_numero_documento': empleadoNumeroDocumento ?? '',
+      'empleado_cargo': TextoDisplay.mayus(empleadoCargo ?? ''),
+      'empleado_nombre': TextoDisplay.mayus(empleadoNombre ?? ''),
+      'empleado_tipo_documento': TextoDisplay.mayus(empleadoTipoDocumento ?? ''),
+      'empleado_numero_documento': TextoDisplay.mayus(empleadoNumeroDocumento ?? ''),
     };
   }
 
@@ -54,13 +56,16 @@ class AsistenciaCapacitacion {
       empleadoId: map['empleado_id'] as int,
       fechaHora: DateTime.parse(map['fecha_hora'] as String),
       fotoPath: map['foto_path'] as String,
-      empleadoNombre: map['empleado_nombre'] as String?,
-      empleadoTipoDocumento: map['empleado_tipo_documento'] as String?,
-      empleadoNumeroDocumento: map['empleado_numero_documento'] as String?,
+      empleadoNombre: TextoDisplay.mayusOpcional(map['empleado_nombre'] as String?),
+      empleadoTipoDocumento:
+          TextoDisplay.mayusOpcional(map['empleado_tipo_documento'] as String?),
+      empleadoNumeroDocumento:
+          TextoDisplay.mayusOpcional(map['empleado_numero_documento'] as String?),
       empleadoEsExterno: (map['empleado_es_externo'] as int?) == 1,
-      empleadoCargo: map['empleado_cargo'] as String?,
-      empresaNombre: map['empresa_nombre'] as String?,
-      capacitacionNombre: map['capacitacion_nombre'] as String?,
+      empleadoCargo: TextoDisplay.mayusOpcional(map['empleado_cargo'] as String?),
+      empresaNombre: TextoDisplay.mayusOpcional(map['empresa_nombre'] as String?),
+      capacitacionNombre:
+          TextoDisplay.mayusOpcional(map['capacitacion_nombre'] as String?),
     );
   }
 }

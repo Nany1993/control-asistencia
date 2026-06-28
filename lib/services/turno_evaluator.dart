@@ -1,6 +1,7 @@
 import '../models/motivo_salida.dart';
 import '../models/registro.dart';
 import '../models/turno.dart';
+import '../utils/texto_display.dart';
 
 class TurnoEvaluator {
   TurnoEvaluator._();
@@ -81,7 +82,7 @@ class TurnoEvaluator {
     MotivoSalida? motivoSalida,
   }) {
     if (turno == null) return null;
-    if (!aplicaEnFecha(turno, fechaHora)) return 'Fuera de dias de turno';
+    if (!aplicaEnFecha(turno, fechaHora)) return 'FUERA DE DIAS DE TURNO';
 
     if (tipo == TipoMarcacion.entrada) {
       if (!esPrimeraEntradaDelDia(
@@ -94,7 +95,7 @@ class TurnoEvaluator {
           .add(Duration(minutes: turno.toleranciaMinutos));
       if (fechaHora.isAfter(limite)) {
         final minutos = fechaHora.difference(limite).inMinutes;
-        return 'Llegada tarde ($minutos min despues de tolerancia)';
+        return 'LLEGADA TARDE ($minutos MIN DESPUES DE TOLERANCIA)';
       }
       return null;
     }
@@ -105,8 +106,8 @@ class TurnoEvaluator {
 
     final minutos =
         _horaEnDia(fechaHora, turno.horaSalida).difference(fechaHora).inMinutes;
-    final base = 'Salida anticipada ($minutos min antes)';
+    final base = 'SALIDA ANTICIPADA ($minutos MIN ANTES)';
     if (motivoSalida == null) return base;
-    return '$base · ${motivoSalida.label}';
+    return '$base · ${TextoDisplay.mayus(motivoSalida.label)}';
   }
 }

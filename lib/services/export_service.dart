@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../database/db_helper.dart';
 import '../models/registro.dart';
+import '../utils/texto_display.dart';
 
 class ExportService {
   ExportService._();
@@ -48,7 +49,8 @@ class ExportService {
     final buffer = StringBuffer();
     buffer.write('\uFEFF');
     buffer.writeln(
-      'Empresa,Tipo persona,Empleado,Cargo,Turno,Tipo documento,Numero documento,Fecha,Hora,Tipo marcacion,Motivo salida,Radicado,Observacion,Ruta foto',
+      'EMPRESA,TIPO PERSONA,EMPLEADO,CARGO,TURNO,TIPO DOCUMENTO,NUMERO DOCUMENTO,'
+      'FECHA,HORA,TIPO MARCACION,MOTIVO SALIDA,RADICADO,OBSERVACION,RUTA FOTO',
     );
 
     for (final registro in registros) {
@@ -78,8 +80,9 @@ class ExportService {
     final generado = DateTime.now();
     final exportadoEn =
         '${_dateFormat.format(generado)} ${_timeFormat.format(generado)}';
-    final fuenteInformacion =
-        'Fuente de la informacion: exportado el $exportadoEn desde la app Control Asistencia';
+    final fuenteInformacion = TextoDisplay.mayus(
+      'Fuente de la informacion: exportado el $exportadoEn desde la app Control Asistencia',
+    );
 
     pw.Widget pdfFooter(pw.Context context) {
       return pw.Container(
@@ -99,51 +102,55 @@ class ExportService {
         footer: pdfFooter,
         build: (context) => [
           pw.Text(
-            'Reporte de asistencia laboral',
+            'REPORTE DE ASISTENCIA LABORAL',
             style: pw.TextStyle(
               fontSize: 18,
               fontWeight: pw.FontWeight.bold,
             ),
           ),
           pw.SizedBox(height: 8),
-          pw.Text('Total registros: ${registros.length}'),
+          pw.Text('TOTAL REGISTROS: ${registros.length}'),
           pw.Text(fuenteInformacion, style: const pw.TextStyle(fontSize: 10)),
           pw.SizedBox(height: 16),
           if (registros.isEmpty)
-            pw.Text('No hay registros para los filtros seleccionados.')
+            pw.Text('NO HAY REGISTROS PARA LOS FILTROS SELECCIONADOS.')
           else
             pw.TableHelper.fromTextArray(
               headers: const [
-                'Empresa',
-                'Tipo',
-                'Nombre',
-                'Cargo',
-                'Documento',
-                'Turno',
-                'Fecha',
-                'Hora',
-                'Marcacion',
-                'Observacion',
+                'EMPRESA',
+                'TIPO',
+                'NOMBRE',
+                'CARGO',
+                'DOCUMENTO',
+                'TURNO',
+                'FECHA',
+                'HORA',
+                'MARCACION',
+                'OBSERVACION',
               ],
               data: [
                 for (final r in registros)
                   [
-                    r.empresaNombre ?? '',
-                    r.tipoPersonaLabel,
-                    r.empleadoNombre ?? '',
-                    r.empleadoCargo ?? '',
-                    '${r.empleadoTipoDocumento ?? ''} ${r.empleadoNumeroDocumento ?? ''}'.trim(),
-                    r.turnoNombre ?? '',
+                    _cell(r.empresaNombre ?? ''),
+                    _cell(r.tipoPersonaLabel),
+                    _cell(r.empleadoNombre ?? ''),
+                    _cell(r.empleadoCargo ?? ''),
+                    _cell(
+                      '${r.empleadoTipoDocumento ?? ''} ${r.empleadoNumeroDocumento ?? ''}'.trim(),
+                    ),
+                    _cell(r.turnoNombre ?? ''),
                     _dateFormat.format(r.fechaHora),
                     _timeFormat.format(r.fechaHora),
-                    r.tipo.label,
-                    [
-                      if (r.motivoSalidaLabel != null) r.motivoSalidaLabel!,
-                      if (r.radicado != null && r.radicado!.isNotEmpty)
-                        'Rad: ${r.radicado}',
-                      if (r.observacion != null && r.observacion!.isNotEmpty)
-                        r.observacion!,
-                    ].join(' · '),
+                    _cell(r.tipo.label),
+                    _cell(
+                      [
+                        if (r.motivoSalidaLabel != null) r.motivoSalidaLabel!,
+                        if (r.radicado != null && r.radicado!.isNotEmpty)
+                          'RAD: ${r.radicado}',
+                        if (r.observacion != null && r.observacion!.isNotEmpty)
+                          r.observacion!,
+                      ].join(' · '),
+                    ),
                   ],
               ],
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
@@ -164,21 +171,23 @@ class ExportService {
     return file;
   }
 
+  String _cell(String value) => TextoDisplay.mayus(value);
+
   String _row(Registro registro) {
     final cells = [
-      _escape(registro.empresaNombre ?? ''),
-      registro.tipoPersonaLabel,
-      _escape(registro.empleadoNombre ?? ''),
-      _escape(registro.empleadoCargo ?? ''),
-      _escape(registro.turnoNombre ?? ''),
-      _escape(registro.empleadoTipoDocumento ?? ''),
-      _escape(registro.empleadoNumeroDocumento ?? ''),
+      _escape(_cell(registro.empresaNombre ?? '')),
+      _escape(_cell(registro.tipoPersonaLabel)),
+      _escape(_cell(registro.empleadoNombre ?? '')),
+      _escape(_cell(registro.empleadoCargo ?? '')),
+      _escape(_cell(registro.turnoNombre ?? '')),
+      _escape(_cell(registro.empleadoTipoDocumento ?? '')),
+      _escape(_cell(registro.empleadoNumeroDocumento ?? '')),
       _dateFormat.format(registro.fechaHora),
       _timeFormat.format(registro.fechaHora),
-      registro.tipo.label,
-      _escape(registro.motivoSalidaLabel ?? ''),
-      _escape(registro.radicado ?? ''),
-      _escape(registro.observacion ?? ''),
+      _escape(_cell(registro.tipo.label)),
+      _escape(_cell(registro.motivoSalidaLabel ?? '')),
+      _escape(_cell(registro.radicado ?? '')),
+      _escape(_cell(registro.observacion ?? '')),
       _escape(registro.fotoPath),
     ];
     return cells.join(',');
@@ -210,7 +219,7 @@ class ExportService {
   Future<void> shareFile(File file, {String? text}) async {
     await Share.shareXFiles(
       [XFile(file.path)],
-      text: text ?? 'Reporte de asistencia',
+      text: text ?? 'REPORTE DE ASISTENCIA',
     );
   }
 }

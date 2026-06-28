@@ -1,6 +1,8 @@
+import '../utils/texto_display.dart';
+
 enum ResultadoCapacitacion {
-  ejecutada('ejecutada', 'Ejecutada'),
-  noEjecutada('no_ejecutada', 'No ejecutada');
+  ejecutada('ejecutada', 'EJECUTADA'),
+  noEjecutada('no_ejecutada', 'NO EJECUTADA');
 
   const ResultadoCapacitacion(this.value, this.label);
   final String value;
@@ -58,7 +60,7 @@ class Capacitacion {
     }
   }
 
-  String get estadoLabel => activa ? 'Abierta' : 'Cerrada';
+  String get estadoLabel => activa ? 'ABIERTA' : 'CERRADA';
 
   static String dateKey(DateTime date) {
     final y = date.year;
@@ -70,9 +72,9 @@ class Capacitacion {
   Map<String, Object?> toMap() {
     return {
       'id': id,
-      'nombre': nombre,
-      'temas': temas,
-      'expositor': expositor,
+      'nombre': TextoDisplay.mayus(nombre),
+      'temas': TextoDisplay.mayus(temas),
+      'expositor': TextoDisplay.mayus(expositor),
       'fecha': dateKey(fecha),
       'empresa_id': empresaId,
       'foto_general_path': fotoGeneralPath,
@@ -97,9 +99,9 @@ class Capacitacion {
 
     return Capacitacion(
       id: map['id'] as int?,
-      nombre: map['nombre'] as String,
-      temas: map['temas'] as String,
-      expositor: map['expositor'] as String,
+      nombre: TextoDisplay.mayus(map['nombre'] as String),
+      temas: TextoDisplay.mayus(map['temas'] as String),
+      expositor: TextoDisplay.mayus(map['expositor'] as String),
       fecha: fecha,
       empresaId: map['empresa_id'] as int?,
       fotoGeneralPath: map['foto_general_path'] as String?,
@@ -110,7 +112,7 @@ class Capacitacion {
           : null,
       cierreAutomatico: (map['cierre_automatico'] as int?) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
-      empresaNombre: map['empresa_nombre'] as String?,
+      empresaNombre: TextoDisplay.mayusOpcional(map['empresa_nombre'] as String?),
       totalAsistentes: map['total_asistentes'] as int?,
     );
   }

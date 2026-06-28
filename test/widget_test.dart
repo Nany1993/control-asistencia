@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(const ControlAsistenciaApp());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Turno'), findsOneWidget);
-    expect(find.text('Capacitacion'), findsOneWidget);
+    expect(find.text('TURNO'), findsOneWidget);
+    expect(find.text('CAPACITACION'), findsOneWidget);
   });
 }

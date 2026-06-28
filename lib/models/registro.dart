@@ -1,4 +1,5 @@
 import 'motivo_salida.dart';
+import '../utils/texto_display.dart';
 
 enum TipoMarcacion {
   entrada('entrada'),
@@ -11,7 +12,7 @@ enum TipoMarcacion {
     return TipoMarcacion.values.firstWhere((t) => t.value == value);
   }
 
-  String get label => value == 'entrada' ? 'Entrada' : 'Salida';
+  String get label => value == 'entrada' ? 'ENTRADA' : 'SALIDA';
 }
 
 class Registro {
@@ -54,7 +55,7 @@ class Registro {
   final String? turnoNombre;
 
   String get tipoPersonaLabel =>
-      (empleadoEsExterno ?? false) ? 'Externo' : 'Interno';
+      (empleadoEsExterno ?? false) ? 'EXTERNO' : 'INTERNO';
 
   String? get motivoSalidaLabel {
     if (motivoSalida == null) return null;
@@ -73,15 +74,15 @@ class Registro {
       'tipo': tipo.value,
       'fecha_hora': fechaHora.toIso8601String(),
       'foto_path': fotoPath,
-      'observacion': observacion,
+      'observacion': TextoDisplay.mayusOpcional(observacion),
       'motivo_salida': motivoSalida,
-      'radicado': radicado,
+      'radicado': TextoDisplay.mayusOpcional(radicado),
       'turno_id': turnoId,
-      'empresa_nombre': empresaNombre ?? '',
-      'empleado_cargo': empleadoCargo ?? '',
-      'empleado_nombre': empleadoNombre ?? '',
-      'empleado_tipo_documento': empleadoTipoDocumento ?? '',
-      'empleado_numero_documento': empleadoNumeroDocumento ?? '',
+      'empresa_nombre': TextoDisplay.mayus(empresaNombre ?? ''),
+      'empleado_cargo': TextoDisplay.mayus(empleadoCargo ?? ''),
+      'empleado_nombre': TextoDisplay.mayus(empleadoNombre ?? ''),
+      'empleado_tipo_documento': TextoDisplay.mayus(empleadoTipoDocumento ?? ''),
+      'empleado_numero_documento': TextoDisplay.mayus(empleadoNumeroDocumento ?? ''),
     };
   }
 
@@ -93,17 +94,19 @@ class Registro {
       tipo: TipoMarcacion.fromValue(map['tipo'] as String),
       fechaHora: DateTime.parse(map['fecha_hora'] as String),
       fotoPath: map['foto_path'] as String,
-      observacion: map['observacion'] as String?,
+      observacion: TextoDisplay.mayusOpcional(map['observacion'] as String?),
       motivoSalida: map['motivo_salida'] as String?,
-      radicado: map['radicado'] as String?,
+      radicado: TextoDisplay.mayusOpcional(map['radicado'] as String?),
       turnoId: map['turno_id'] as int?,
-      empresaNombre: map['empresa_nombre'] as String?,
-      empleadoNombre: map['empleado_nombre'] as String?,
-      empleadoTipoDocumento: map['empleado_tipo_documento'] as String?,
-      empleadoNumeroDocumento: map['empleado_numero_documento'] as String?,
+      empresaNombre: TextoDisplay.mayusOpcional(map['empresa_nombre'] as String?),
+      empleadoNombre: TextoDisplay.mayusOpcional(map['empleado_nombre'] as String?),
+      empleadoTipoDocumento:
+          TextoDisplay.mayusOpcional(map['empleado_tipo_documento'] as String?),
+      empleadoNumeroDocumento:
+          TextoDisplay.mayusOpcional(map['empleado_numero_documento'] as String?),
       empleadoEsExterno: (map['empleado_es_externo'] as int?) == 1,
-      empleadoCargo: map['empleado_cargo'] as String?,
-      turnoNombre: map['turno_nombre'] as String?,
+      empleadoCargo: TextoDisplay.mayusOpcional(map['empleado_cargo'] as String?),
+      turnoNombre: TextoDisplay.mayusOpcional(map['turno_nombre'] as String?),
     );
   }
 }

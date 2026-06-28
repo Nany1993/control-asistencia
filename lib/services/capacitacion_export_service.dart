@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../database/db_helper.dart';
 import '../models/capacitacion.dart';
 import '../models/asistencia_capacitacion.dart';
+import '../utils/texto_display.dart';
 
 class CapacitacionExportService {
   CapacitacionExportService._();
@@ -31,7 +32,8 @@ class CapacitacionExportService {
     final buffer = StringBuffer();
     buffer.write('\uFEFF');
     buffer.writeln(
-      'Capacitacion,Temas,Expositor,Fecha sesion,Estado,Resultado,Empresa,Tipo persona,Nombre,Cargo,Tipo doc,Numero doc,Hora registro,Ruta foto',
+      'CAPACITACION,TEMAS,EXPOSITOR,FECHA SESION,ESTADO,RESULTADO,EMPRESA,'
+      'TIPO PERSONA,NOMBRE,CARGO,TIPO DOC,NUMERO DOC,HORA REGISTRO,RUTA FOTO',
     );
 
     for (final a in asistentes) {
@@ -61,8 +63,9 @@ class CapacitacionExportService {
     final generado = DateTime.now();
     final exportadoEn =
         '${_dateFormat.format(generado)} ${_timeFormat.format(generado)}';
-    final fuenteInformacion =
-        'Fuente de la informacion: exportado el $exportadoEn desde la app Control Asistencia';
+    final fuenteInformacion = TextoDisplay.mayus(
+      'Fuente de la informacion: exportado el $exportadoEn desde la app Control Asistencia',
+    );
 
     pw.Widget pdfFooter(pw.Context context) {
       return pw.Container(
@@ -82,23 +85,23 @@ class CapacitacionExportService {
         footer: pdfFooter,
         build: (context) => [
           pw.Text(
-            'Informe de asistencia a capacitacion',
+            'INFORME DE ASISTENCIA A CAPACITACION',
             style: pw.TextStyle(
               fontSize: 20,
               fontWeight: pw.FontWeight.bold,
             ),
           ),
           pw.SizedBox(height: 16),
-          _infoRow('Capacitacion', cap.nombre),
-          _infoRow('Temas tratados', cap.temas),
-          _infoRow('Expositor', cap.expositor),
-          _infoRow('Fecha programada', _dateFormat.format(cap.fecha)),
-          _infoRow('Estado', cap.estadoLabel),
+          _infoRow('CAPACITACION', cap.nombre),
+          _infoRow('TEMAS TRATADOS', cap.temas),
+          _infoRow('EXPOSITOR', cap.expositor),
+          _infoRow('FECHA PROGRAMADA', _dateFormat.format(cap.fecha)),
+          _infoRow('ESTADO', cap.estadoLabel),
           if (cap.resultadoLabel != null)
-            _infoRow('Resultado', cap.resultadoLabel!),
+            _infoRow('RESULTADO', cap.resultadoLabel!),
           if (cap.empresaNombre != null)
-            _infoRow('Empresa', cap.empresaNombre!),
-          _infoRow('Total asistentes', '${asistentes.length}'),
+            _infoRow('EMPRESA', cap.empresaNombre!),
+          _infoRow('TOTAL ASISTENTES', '${asistentes.length}'),
           pw.SizedBox(height: 8),
           pw.Text(
             fuenteInformacion,
@@ -107,7 +110,7 @@ class CapacitacionExportService {
           pw.SizedBox(height: 16),
           if (cap.tieneFotoGeneral) ...[
             pw.Text(
-              'Foto general de la capacitacion',
+              'FOTO GENERAL DE LA CAPACITACION',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 8),
@@ -116,39 +119,39 @@ class CapacitacionExportService {
           ],
           if (cap.resultado == ResultadoCapacitacion.noEjecutada.value) ...[
             pw.Text(
-              'La capacitacion no registro asistencia y quedo como no ejecutada.',
+              'LA CAPACITACION NO REGISTRO ASISTENCIA Y QUEDO COMO NO EJECUTADA.',
               style: const pw.TextStyle(fontSize: 11),
             ),
           ] else if (asistentes.isEmpty) ...[
             pw.Text(
-              'No hay asistentes registrados.',
+              'NO HAY ASISTENTES REGISTRADOS.',
               style: const pw.TextStyle(fontSize: 11),
             ),
           ] else ...[
             pw.Text(
-              'Listado de asistentes',
+              'LISTADO DE ASISTENTES',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 8),
             pw.TableHelper.fromTextArray(
               headers: const [
                 '#',
-                'Nombre',
-                'Cargo',
-                'Documento',
-                'Empresa',
-                'Tipo',
-                'Hora',
+                'NOMBRE',
+                'CARGO',
+                'DOCUMENTO',
+                'EMPRESA',
+                'TIPO',
+                'HORA',
               ],
               data: [
                 for (var i = 0; i < asistentes.length; i++)
                   [
                     '${i + 1}',
-                    asistentes[i].empleadoNombre ?? '',
-                    asistentes[i].empleadoCargo ?? '',
-                    asistentes[i].documentoLabel,
-                    asistentes[i].empresaNombre ?? '',
-                    asistentes[i].tipoPersonaLabel,
+                    _cell(asistentes[i].empleadoNombre ?? ''),
+                    _cell(asistentes[i].empleadoCargo ?? ''),
+                    _cell(asistentes[i].documentoLabel),
+                    _cell(asistentes[i].empresaNombre ?? ''),
+                    _cell(asistentes[i].tipoPersonaLabel),
                     _timeFormat.format(asistentes[i].fechaHora),
                   ],
               ],
@@ -170,7 +173,7 @@ class CapacitacionExportService {
           footer: pdfFooter,
           build: (context) => [
             pw.Text(
-              'Evidencia fotografica individual',
+              'EVIDENCIA FOTOGRAFICA INDIVIDUAL',
               style: pw.TextStyle(
                 fontSize: 16,
                 fontWeight: pw.FontWeight.bold,
@@ -179,9 +182,9 @@ class CapacitacionExportService {
             pw.SizedBox(height: 12),
             for (var i = 0; i < asistentes.length; i++) ...[
               pw.Text(
-                '${i + 1}. ${asistentes[i].empleadoNombre ?? ''}'
+                '${i + 1}. ${_cell(asistentes[i].empleadoNombre ?? '')}'
                 '${_cargoPdfSuffix(asistentes[i].empleadoCargo)}'
-                ' · ${asistentes[i].documentoLabel}'
+                ' · ${_cell(asistentes[i].documentoLabel)}'
                 ' · ${_timeFormat.format(asistentes[i].fechaHora)}',
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
               ),
@@ -210,10 +213,10 @@ class CapacitacionExportService {
         text: pw.TextSpan(
           children: [
             pw.TextSpan(
-              text: '$label: ',
+              text: '${TextoDisplay.mayus(label)}: ',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
             ),
-            pw.TextSpan(text: value),
+            pw.TextSpan(text: _cell(value)),
           ],
         ),
       ),
@@ -223,7 +226,7 @@ class CapacitacionExportService {
   pw.Widget _buildImage(String path, {required double width, required double height}) {
     final file = File(path);
     if (!file.existsSync()) {
-      return pw.Text('Foto no disponible');
+      return pw.Text('FOTO NO DISPONIBLE');
     }
     final bytes = file.readAsBytesSync();
     final image = pw.MemoryImage(bytes);
@@ -232,23 +235,25 @@ class CapacitacionExportService {
 
   String _cargoPdfSuffix(String? cargo) {
     if (cargo == null || cargo.trim().isEmpty) return '';
-    return ' · $cargo';
+    return ' · ${_cell(cargo)}';
   }
+
+  String _cell(String value) => TextoDisplay.mayus(value);
 
   String _csvRow(Capacitacion cap, AsistenciaCapacitacion a) {
     return [
-      _escape(cap.nombre),
-      _escape(cap.temas),
-      _escape(cap.expositor),
+      _escape(_cell(cap.nombre)),
+      _escape(_cell(cap.temas)),
+      _escape(_cell(cap.expositor)),
       _dateFormat.format(cap.fecha),
-      cap.estadoLabel,
-      _escape(cap.resultadoLabel ?? ''),
-      _escape(a.empresaNombre ?? ''),
-      a.tipoPersonaLabel,
-      _escape(a.empleadoNombre ?? ''),
-      _escape(a.empleadoCargo ?? ''),
-      _escape(a.empleadoTipoDocumento ?? ''),
-      _escape(a.empleadoNumeroDocumento ?? ''),
+      _cell(cap.estadoLabel),
+      _escape(_cell(cap.resultadoLabel ?? '')),
+      _escape(_cell(a.empresaNombre ?? '')),
+      _cell(a.tipoPersonaLabel),
+      _escape(_cell(a.empleadoNombre ?? '')),
+      _escape(_cell(a.empleadoCargo ?? '')),
+      _escape(_cell(a.empleadoTipoDocumento ?? '')),
+      _escape(_cell(a.empleadoNumeroDocumento ?? '')),
       _timeFormat.format(a.fechaHora),
       _escape(a.fotoPath),
     ].join(',');
@@ -256,12 +261,12 @@ class CapacitacionExportService {
 
   String _csvEmptyRow(Capacitacion cap) {
     return [
-      _escape(cap.nombre),
-      _escape(cap.temas),
-      _escape(cap.expositor),
+      _escape(_cell(cap.nombre)),
+      _escape(_cell(cap.temas)),
+      _escape(_cell(cap.expositor)),
       _dateFormat.format(cap.fecha),
-      cap.estadoLabel,
-      _escape(cap.resultadoLabel ?? ''),
+      _cell(cap.estadoLabel),
+      _escape(_cell(cap.resultadoLabel ?? '')),
       '',
       '',
       '',
@@ -307,7 +312,7 @@ class CapacitacionExportService {
   Future<void> shareFile(File file, {String? text}) async {
     await Share.shareXFiles(
       [XFile(file.path)],
-      text: text ?? 'Informe de capacitacion',
+      text: text ?? 'INFORME DE CAPACITACION',
     );
   }
 }

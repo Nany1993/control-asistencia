@@ -13,6 +13,7 @@ import '../../services/marcacion_validator.dart';
 import '../../services/photo_service.dart';
 import '../../services/turno_evaluator.dart';
 import '../../utils/persona_search.dart';
+import '../../widgets/info_text.dart';
 import '../../widgets/salida_anticipada_dialog.dart';
 
 class AsistenciaScreen extends StatefulWidget {
@@ -196,7 +197,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
     if (!MarcacionValidator.puedeMarcar(_ultimoRegistro, tipo)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
+          content: InfoText(
             MarcacionValidator.mensajeBloqueo(_ultimoRegistro, tipo),
           ),
         ),
@@ -361,7 +362,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
         final extra = observacion != null ? ' ($observacion)' : '';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
+            content: InfoText(
               cierreAutomatico
                   ? 'Salida automatica del dia anterior (No registro salida). '
                       '${_tipo!.label} registrada para ${_empleado!.nombre}$extra'
@@ -449,7 +450,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                   children: [
-                    const _SectionTitle('1. Empresa'),
+                    const SectionTitle('1. Empresa'),
                     DropdownButtonFormField<Empresa>(
                       initialValue: _empresa,
                       decoration: const InputDecoration(
@@ -464,7 +465,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                       onChanged: _onEmpresaSelected,
                     ),
                     const SizedBox(height: 20),
-                    const _SectionTitle('2. Tipo de persona'),
+                    const SectionTitle('2. Tipo de persona'),
                     SegmentedButton<bool>(
                       segments: const [
                         ButtonSegment(value: false, label: Text('Internos'), icon: Icon(Icons.badge)),
@@ -476,15 +477,15 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                           : (s) => _onTipoPersonaChanged(s.first),
                     ),
                     const SizedBox(height: 20),
-                    _SectionTitle(_esExterno ? '3. Externo' : '3. Empleado'),
+                    SectionTitle(_esExterno ? '3. Externo' : '3. Empleado'),
                     PersonaSearchField(
                       controller: _busqueda,
-                      hintText: 'Escriba nombre, documento o cargo...',
+                      hintText: 'ESCRIBA NOMBRE, DOCUMENTO O CARGO...',
                       onChanged: (_) => setState(() {}),
                     ),
                     const SizedBox(height: 8),
                     if (_empresa == null)
-                      const Text('Seleccione una empresa primero')
+                      const InfoText('Seleccione una empresa primero')
                     else if (_empleado != null) ...[
                       _personaSeleccionadaCard(_empleado!),
                     ] else if (!buscando)
@@ -495,7 +496,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                             ),
                       )
                     else if (filtradas.isEmpty)
-                      const Text('Sin coincidencias')
+                      const InfoText('Sin coincidencias')
                     else ...[
                       if (_hayMasCoincidencias)
                         Padding(
@@ -570,7 +571,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                       ),
                     ],
                     const SizedBox(height: 20),
-                    const _SectionTitle('4. Tipo'),
+                    const SectionTitle('4. Tipo'),
                     Row(
                       children: [
                         _tipoButton(TipoMarcacion.entrada),
@@ -578,7 +579,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    const _SectionTitle('5. Foto'),
+                    const SectionTitle('5. Foto'),
                     if (_foto != null)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -614,29 +615,11 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.check),
-                    label: const Text('Registrar marcacion'),
+                    label: const InfoText('Registrar marcacion'),
                   ),
                 ),
               ),
             ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-      ),
     );
   }
 }

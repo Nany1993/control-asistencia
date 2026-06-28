@@ -1,3 +1,5 @@
+import '../utils/texto_display.dart';
+
 class Turno {
   const Turno({
     this.id,
@@ -61,7 +63,7 @@ class Turno {
   Map<String, Object?> toMap() {
     return {
       'id': id,
-      'nombre': nombre,
+      'nombre': TextoDisplay.mayus(nombre),
       'hora_entrada': horaEntrada,
       'hora_salida': horaSalida,
       'tolerancia_minutos': toleranciaMinutos,
@@ -74,7 +76,7 @@ class Turno {
   factory Turno.fromMap(Map<String, Object?> map) {
     return Turno(
       id: map['id'] as int?,
-      nombre: map['nombre'] as String,
+      nombre: TextoDisplay.mayus(map['nombre'] as String),
       horaEntrada: map['hora_entrada'] as String,
       horaSalida: map['hora_salida'] as String,
       toleranciaMinutos: (map['tolerancia_minutos'] as int?) ?? 15,
@@ -86,13 +88,13 @@ class Turno {
 }
 
 const diasSemanaLabels = {
-  1: 'Lun',
-  2: 'Mar',
-  3: 'Mie',
-  4: 'Jue',
-  5: 'Vie',
-  6: 'Sab',
-  7: 'Dom',
+  1: 'LUN',
+  2: 'MAR',
+  3: 'MIE',
+  4: 'JUE',
+  5: 'VIE',
+  6: 'SAB',
+  7: 'DOM',
 };
 
 String diasSemanaTexto(String diasSemana) {

@@ -1,8 +1,8 @@
 enum MotivoSalida {
-  almuerzo('almuerzo', 'Almuerzo'),
-  citaMedica('cita_medica', 'Cita medica'),
-  permiso('permiso', 'Permiso'),
-  sinPermiso('sin_permiso', 'Sin permiso');
+  almuerzo('almuerzo', 'ALMUERZO'),
+  citaMedica('cita_medica', 'CITA MEDICA'),
+  permiso('permiso', 'PERMISO'),
+  sinPermiso('sin_permiso', 'SIN PERMISO');
 
   const MotivoSalida(this.value, this.label);
   final String value;

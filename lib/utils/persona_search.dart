@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'texto_display.dart';
+
 /// Filtra personas por nombre, tipo de documento o numero.
 class PersonaSearch {
   PersonaSearch._();
@@ -45,7 +47,7 @@ class PersonaSearchField extends StatelessWidget {
   const PersonaSearchField({
     super.key,
     required this.controller,
-    this.hintText = 'Buscar por nombre o documento...',
+    this.hintText = 'BUSCAR POR NOMBRE O DOCUMENTO...',
     this.onChanged,
   });
 
@@ -62,7 +64,7 @@ class PersonaSearchField extends StatelessWidget {
           controller: controller,
           onChanged: onChanged,
           decoration: InputDecoration(
-            hintText: hintText,
+            hintText: TextoDisplay.mayus(hintText),
             border: const OutlineInputBorder(),
             prefixIcon: const Icon(Icons.search),
             suffixIcon: controller.text.isEmpty
