@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../database/db_helper.dart';
+import '../../database/referential_integrity_exception.dart';
 import '../../models/turno.dart';
 
 class TurnosScreen extends StatefulWidget {
@@ -41,25 +42,37 @@ class _TurnosScreenState extends State<TurnosScreen> {
 
   Future<void> _delete(Turno turno) async {
     final asignados = await DbHelper.instance.countEmpleadosConTurno(turno.id!);
+    final marcaciones = await DbHelper.instance.countRegistrosLaborales(turnoId: turno.id);
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar turno'),
         content: Text(
-          asignados > 0
-              ? '"${turno.nombre}" tiene $asignados empleado(s) asignado(s). '
-                  'Se quitara el turno de esos empleados. Continuar?'
-              : 'Eliminar turno "${turno.nombre}"?',
+          marcaciones > 0
+              ? 'No se puede eliminar "${turno.nombre}" porque tiene '
+                  '$marcaciones marcacion(es) registrada(s).'
+              : asignados > 0
+                  ? '"${turno.nombre}" tiene $asignados empleado(s) asignado(s). '
+                      'Se quitara el turno de esos empleados. Continuar?'
+                  : 'Eliminar turno "${turno.nombre}"?',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
+          if (marcaciones == 0)
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Eliminar')),
         ],
       ),
     );
-    if (confirm == true) {
+    if (confirm != true) return;
+
+    try {
       await DbHelper.instance.deleteTurno(turno.id!);
       await _load();
+    } on ReferentialIntegrityException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     }
   }
 

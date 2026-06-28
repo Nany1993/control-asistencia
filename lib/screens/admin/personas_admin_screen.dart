@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../database/db_helper.dart';
+import '../../database/referential_integrity_exception.dart';
 import '../../models/empleado.dart';
 import '../../models/empresa.dart';
 import '../../models/tipo_documento.dart';
@@ -108,7 +109,8 @@ class _PersonasAdminScreenState extends State<PersonasAdminScreen> {
       builder: (ctx) => AlertDialog(
         title: Text('Eliminar ${widget.esExterno ? 'externo' : 'empleado'}'),
         content: Text(
-          'Se eliminaran los registros de "${persona.nombre}". Continuar?',
+          'Eliminar a "${persona.nombre}"? '
+          'Solo es posible si no tiene marcaciones ni asistencias a capacitaciones.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
@@ -116,9 +118,15 @@ class _PersonasAdminScreenState extends State<PersonasAdminScreen> {
         ],
       ),
     );
-    if (confirm == true) {
+    if (confirm != true) return;
+
+    try {
       await DbHelper.instance.deleteEmpleado(persona.id!);
       await _load();
+    } on ReferentialIntegrityException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     }
   }
 

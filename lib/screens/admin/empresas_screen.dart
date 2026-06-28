@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../database/db_helper.dart';
+import '../../database/referential_integrity_exception.dart';
 import '../../models/empresa.dart';
 
 class EmpresasScreen extends StatefulWidget {
@@ -45,7 +46,9 @@ class _EmpresasScreenState extends State<EmpresasScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar empresa'),
         content: Text(
-          'Se eliminaran empleados y registros de "${empresa.nombre}". Continuar?',
+          'Eliminar "${empresa.nombre}"? '
+          'Solo es posible si no tiene marcaciones, asistencias a capacitaciones '
+          'ni colaboradores con historial.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
@@ -53,9 +56,15 @@ class _EmpresasScreenState extends State<EmpresasScreen> {
         ],
       ),
     );
-    if (confirm == true) {
+    if (confirm != true) return;
+
+    try {
       await DbHelper.instance.deleteEmpresa(empresa.id!);
       await _load();
+    } on ReferentialIntegrityException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     }
   }
 

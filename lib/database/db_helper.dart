@@ -1,6 +1,7 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'referential_integrity_exception.dart';
 import '../models/asistencia_capacitacion.dart';
 import '../models/capacitacion.dart';
 import '../models/empleado.dart';
@@ -323,7 +324,41 @@ class DbHelper {
   }
 
   Future<void> deleteEmpresa(int id) async {
+    final laborales = await countRegistrosLaborales(empresaId: id);
+    final capacitaciones = await countAsistenciasCapacitacionEmpresa(id);
+    if (laborales > 0 || capacitaciones > 0) {
+      final partes = <String>[];
+      if (laborales > 0) {
+        partes.add('$laborales marcacion(es) laboral(es)');
+      }
+      if (capacitaciones > 0) {
+        partes.add('$capacitaciones asistencia(s) a capacitaciones');
+      }
+      throw ReferentialIntegrityException(
+        'No se puede eliminar la empresa: tiene ${partes.join(' y ')}. '
+        'Puede marcarla como inactiva.',
+      );
+    }
+
     final db = await database;
+    final empleados = await db.query(
+      'empleados',
+      columns: ['id'],
+      where: 'empresa_id = ?',
+      whereArgs: [id],
+    );
+    for (final row in empleados) {
+      final empId = row['id'] as int;
+      final regsEmpleado = await countRegistrosLaborales(empleadoId: empId);
+      final capsEmpleado = await countAsistenciasCapacitacionEmpleado(empId);
+      if (regsEmpleado > 0 || capsEmpleado > 0) {
+        throw ReferentialIntegrityException(
+          'No se puede eliminar la empresa: hay colaboradores con registros historicos. '
+          'Reasignelos a otra empresa o marque la empresa como inactiva.',
+        );
+      }
+    }
+
     final caps = await db.query(
       'capacitaciones',
       columns: ['id'],
@@ -333,9 +368,10 @@ class DbHelper {
     for (final row in caps) {
       await deleteCapacitacion(row['id'] as int);
     }
+    for (final row in empleados) {
+      await _deleteEmpleadoSinRegistros(row['id'] as int);
+    }
     await db.delete('empresas', where: 'id = ?', whereArgs: [id]);
-    await db.delete('empleados', where: 'empresa_id = ?', whereArgs: [id]);
-    await db.delete('registros', where: 'empresa_id = ?', whereArgs: [id]);
   }
 
   Future<List<Turno>> getTurnos() async {
@@ -379,6 +415,13 @@ class DbHelper {
   }
 
   Future<void> deleteTurno(int id) async {
+    final marcaciones = await countRegistrosLaborales(turnoId: id);
+    if (marcaciones > 0) {
+      throw ReferentialIntegrityException(
+        'No se puede eliminar el turno: tiene $marcaciones marcacion(es) registrada(s).',
+      );
+    }
+
     final db = await database;
     await db.delete('empleado_turnos', where: 'turno_id = ?', whereArgs: [id]);
     await db.update(
@@ -498,10 +541,86 @@ class DbHelper {
   }
 
   Future<void> deleteEmpleado(int id) async {
+    final laborales = await countRegistrosLaborales(empleadoId: id);
+    final capacitaciones = await countAsistenciasCapacitacionEmpleado(id);
+    if (laborales > 0 || capacitaciones > 0) {
+      final partes = <String>[];
+      if (laborales > 0) {
+        partes.add('$laborales marcacion(es) laboral(es)');
+      }
+      if (capacitaciones > 0) {
+        partes.add('$capacitaciones asistencia(s) a capacitaciones');
+      }
+      throw ReferentialIntegrityException(
+        'No se puede eliminar: tiene ${partes.join(' y ')}. '
+        'Puede desactivarlo en su lugar.',
+      );
+    }
+
     final db = await database;
     await db.delete('empleado_turnos', where: 'empleado_id = ?', whereArgs: [id]);
     await db.delete('empleados', where: 'id = ?', whereArgs: [id]);
-    await db.delete('registros', where: 'empleado_id = ?', whereArgs: [id]);
+  }
+
+  Future<void> _deleteEmpleadoSinRegistros(int id) async {
+    final db = await database;
+    await db.delete('empleado_turnos', where: 'empleado_id = ?', whereArgs: [id]);
+    await db.delete('empleados', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> countRegistrosLaborales({
+    int? empleadoId,
+    int? empresaId,
+    int? turnoId,
+  }) async {
+    final filters = <String>[];
+    final args = <Object>[];
+
+    if (empleadoId != null) {
+      filters.add('empleado_id = ?');
+      args.add(empleadoId);
+    }
+    if (empresaId != null) {
+      filters.add('empresa_id = ?');
+      args.add(empresaId);
+    }
+    if (turnoId != null) {
+      filters.add('turno_id = ?');
+      args.add(turnoId);
+    }
+    if (filters.isEmpty) return 0;
+
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM registros WHERE ${filters.join(' AND ')}',
+      args,
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<int> countAsistenciasCapacitacionEmpleado(int empleadoId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM asistencia_capacitacion WHERE empleado_id = ?',
+      [empleadoId],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<int> countAsistenciasCapacitacionEmpresa(int empresaId) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) AS c FROM asistencia_capacitacion ac
+      WHERE EXISTS (
+        SELECT 1 FROM empleados e
+        WHERE e.id = ac.empleado_id AND e.empresa_id = ?
+      )
+      OR EXISTS (
+        SELECT 1 FROM capacitaciones c
+        WHERE c.id = ac.capacitacion_id AND c.empresa_id = ?
+      )
+    ''', [empresaId, empresaId]);
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<int> insertRegistro(Registro registro) async {
