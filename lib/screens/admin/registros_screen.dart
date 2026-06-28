@@ -251,6 +251,9 @@ class _RegistrosScreenState extends State<RegistrosScreen> {
                             subtitle: Text(
                               [
                                 if (doc.isNotEmpty) doc,
+                                if (r.empleadoCargo != null &&
+                                    r.empleadoCargo!.isNotEmpty)
+                                  r.empleadoCargo!,
                                 if (r.turnoNombre != null) 'Turno: ${r.turnoNombre}',
                                 r.empresaNombre ?? '',
                                 _dateFormat.format(r.fechaHora),

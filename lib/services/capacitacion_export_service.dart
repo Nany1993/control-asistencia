@@ -31,7 +31,7 @@ class CapacitacionExportService {
     final buffer = StringBuffer();
     buffer.write('\uFEFF');
     buffer.writeln(
-      'Capacitacion,Temas,Expositor,Fecha sesion,Estado,Resultado,Empresa,Tipo persona,Nombre,Tipo doc,Numero doc,Hora registro,Ruta foto',
+      'Capacitacion,Temas,Expositor,Fecha sesion,Estado,Resultado,Empresa,Tipo persona,Nombre,Cargo,Tipo doc,Numero doc,Hora registro,Ruta foto',
     );
 
     for (final a in asistentes) {
@@ -134,6 +134,7 @@ class CapacitacionExportService {
               headers: const [
                 '#',
                 'Nombre',
+                'Cargo',
                 'Documento',
                 'Empresa',
                 'Tipo',
@@ -144,6 +145,7 @@ class CapacitacionExportService {
                   [
                     '${i + 1}',
                     asistentes[i].empleadoNombre ?? '',
+                    asistentes[i].empleadoCargo ?? '',
                     asistentes[i].documentoLabel,
                     asistentes[i].empresaNombre ?? '',
                     asistentes[i].tipoPersonaLabel,
@@ -177,9 +179,10 @@ class CapacitacionExportService {
             pw.SizedBox(height: 12),
             for (var i = 0; i < asistentes.length; i++) ...[
               pw.Text(
-                '${i + 1}. ${asistentes[i].empleadoNombre ?? ''} · '
-                '${asistentes[i].documentoLabel} · '
-                '${_timeFormat.format(asistentes[i].fechaHora)}',
+                '${i + 1}. ${asistentes[i].empleadoNombre ?? ''}'
+                '${_cargoPdfSuffix(asistentes[i].empleadoCargo)}'
+                ' · ${asistentes[i].documentoLabel}'
+                ' · ${_timeFormat.format(asistentes[i].fechaHora)}',
                 style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
               ),
               pw.SizedBox(height: 6),
@@ -227,6 +230,11 @@ class CapacitacionExportService {
     return pw.Image(image, width: width, height: height, fit: pw.BoxFit.cover);
   }
 
+  String _cargoPdfSuffix(String? cargo) {
+    if (cargo == null || cargo.trim().isEmpty) return '';
+    return ' · $cargo';
+  }
+
   String _csvRow(Capacitacion cap, AsistenciaCapacitacion a) {
     return [
       _escape(cap.nombre),
@@ -238,6 +246,7 @@ class CapacitacionExportService {
       _escape(a.empresaNombre ?? ''),
       a.tipoPersonaLabel,
       _escape(a.empleadoNombre ?? ''),
+      _escape(a.empleadoCargo ?? ''),
       _escape(a.empleadoTipoDocumento ?? ''),
       _escape(a.empleadoNumeroDocumento ?? ''),
       _timeFormat.format(a.fechaHora),
@@ -253,6 +262,7 @@ class CapacitacionExportService {
       _dateFormat.format(cap.fecha),
       cap.estadoLabel,
       _escape(cap.resultadoLabel ?? ''),
+      '',
       '',
       '',
       '',

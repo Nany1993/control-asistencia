@@ -78,6 +78,7 @@ class _PersonasAdminScreenState extends State<PersonasAdminScreen> {
         nombre: p.nombre,
         tipoDocumento: p.tipoDocumento,
         numeroDocumento: p.numeroDocumento,
+        cargo: p.cargo,
         query: q,
       );
     }).toList();
@@ -188,10 +189,16 @@ class _PersonasAdminScreenState extends State<PersonasAdminScreen> {
                         itemBuilder: (context, index) {
                           final persona = filtradas[index];
                           final subtitulo = widget.esExterno
-                              ? '${persona.documentoLabel} · ${persona.activo ? 'Activo' : 'Inactivo'}'
+                              ? [
+                                  persona.documentoLabel,
+                                  if (persona.cargo.isNotEmpty) persona.cargo,
+                                  persona.activo ? 'Activo' : 'Inactivo',
+                                ].join(' · ')
                               : [
                                   persona.documentoLabel,
-                                  if (persona.turnosNombre != null) 'Turnos: ${persona.turnosNombre}',
+                                  if (persona.cargo.isNotEmpty) persona.cargo,
+                                  if (persona.turnosNombre != null)
+                                    'Turnos: ${persona.turnosNombre}',
                                   persona.activo ? 'Activo' : 'Inactivo',
                                 ].join(' · ');
                           return ListTile(
@@ -237,6 +244,7 @@ class _PersonaFormDialog extends StatefulWidget {
 class _PersonaFormDialogState extends State<_PersonaFormDialog> {
   late final TextEditingController _nombre;
   late final TextEditingController _numeroDocumento;
+  late final TextEditingController _cargo;
   late int _empresaId;
   late String _tipoDocumento;
   late bool _activo;
@@ -250,6 +258,7 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
     super.initState();
     _nombre = TextEditingController(text: widget.persona?.nombre ?? '');
     _numeroDocumento = TextEditingController(text: widget.persona?.numeroDocumento ?? '');
+    _cargo = TextEditingController(text: widget.persona?.cargo ?? '');
     _empresaId = widget.persona?.empresaId ?? widget.empresaIdInicial;
     _tipoDocumento = widget.persona?.tipoDocumento ?? TipoDocumento.cc.codigo;
     _activo = widget.persona?.activo ?? true;
@@ -284,12 +293,14 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
   void dispose() {
     _nombre.dispose();
     _numeroDocumento.dispose();
+    _cargo.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     final nombre = _nombre.text.trim();
     final numero = _numeroDocumento.text.trim();
+    final cargo = _cargo.text.trim();
 
     if (nombre.isEmpty || numero.isEmpty) {
       setState(() => _error = 'Nombre y numero de documento son obligatorios');
@@ -309,6 +320,7 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
           nombre: nombre,
           tipoDocumento: _tipoDocumento,
           numeroDocumento: numero,
+          cargo: cargo,
           esExterno: widget.esExterno,
           activo: _activo,
           createdAt: DateTime.now(),
@@ -322,6 +334,7 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
           nombre: nombre,
           tipoDocumento: _tipoDocumento,
           numeroDocumento: numero,
+          cargo: cargo,
           activo: _activo,
         ),
         turnoIds: widget.esExterno ? [] : turnoIds,
@@ -362,7 +375,7 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
             if (widget.persona != null) ...[
               const SizedBox(height: 8),
               Text(
-                'Los registros anteriores conservan la empresa y turno con que fueron marcados.',
+                'Los registros anteriores conservan la empresa, turno y cargo con que fueron marcados.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -372,6 +385,15 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
               decoration: const InputDecoration(labelText: 'Nombre completo'),
               autofocus: true,
               textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _cargo,
+              decoration: const InputDecoration(
+                labelText: 'Cargo',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.sentences,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(

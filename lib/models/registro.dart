@@ -31,6 +31,7 @@ class Registro {
     this.empleadoTipoDocumento,
     this.empleadoNumeroDocumento,
     this.empleadoEsExterno,
+    this.empleadoCargo,
     this.turnoNombre,
   });
 
@@ -49,6 +50,7 @@ class Registro {
   final String? empleadoTipoDocumento;
   final String? empleadoNumeroDocumento;
   final bool? empleadoEsExterno;
+  final String? empleadoCargo;
   final String? turnoNombre;
 
   String get tipoPersonaLabel =>
@@ -75,6 +77,7 @@ class Registro {
       'motivo_salida': motivoSalida,
       'radicado': radicado,
       'turno_id': turnoId,
+      'empleado_cargo': empleadoCargo ?? '',
     };
   }
 
@@ -95,6 +98,7 @@ class Registro {
       empleadoTipoDocumento: map['empleado_tipo_documento'] as String?,
       empleadoNumeroDocumento: map['empleado_numero_documento'] as String?,
       empleadoEsExterno: (map['empleado_es_externo'] as int?) == 1,
+      empleadoCargo: map['empleado_cargo'] as String?,
       turnoNombre: map['turno_nombre'] as String?,
     );
   }

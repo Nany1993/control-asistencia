@@ -120,6 +120,9 @@ class _AsistenciaCapScreenState extends State<AsistenciaCapScreen> {
                             subtitle: Text(
                               [
                                 a.capacitacionNombre ?? '',
+                                if (a.empleadoCargo != null &&
+                                    a.empleadoCargo!.isNotEmpty)
+                                  a.empleadoCargo!,
                                 a.documentoLabel,
                                 a.tipoPersonaLabel,
                                 a.empresaNombre ?? '',

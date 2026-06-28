@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import '../../database/db_helper.dart';
 import '../../models/capacitacion.dart';
 import '../../models/empleado.dart';
-import '../../models/empresa.dart';
 import '../../models/asistencia_capacitacion.dart';
 import '../../services/capacitacion_service.dart';
 import '../../services/photo_service.dart';
@@ -25,15 +24,13 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
   final _busqueda = TextEditingController();
 
   List<Capacitacion> _capacitaciones = [];
-  List<Empresa> _empresas = [];
   List<Empleado> _personas = [];
+  Set<int> _asistieronIds = {};
   Capacitacion? _capacitacion;
-  Empresa? _empresa;
   Empleado? _empleado;
   File? _foto;
   bool _loading = true;
   bool _saving = false;
-  bool _esExterno = false;
 
   @override
   void initState() {
@@ -55,11 +52,9 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
       soloAbiertas: true,
       soloHoy: true,
     );
-    final empresas = await DbHelper.instance.getEmpresas(soloActivas: true);
     if (mounted) {
       setState(() {
         _capacitaciones = caps;
-        _empresas = empresas;
         _loading = false;
         if (_capacitacion != null &&
             !caps.any((c) => c.id == _capacitacion!.id)) {
@@ -71,9 +66,9 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
 
   void _resetSeleccion() {
     _capacitacion = null;
-    _empresa = null;
     _empleado = null;
     _personas = [];
+    _asistieronIds = {};
     _foto = null;
     _busqueda.clear();
   }
@@ -84,62 +79,22 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
       _empleado = null;
       _foto = null;
       _busqueda.clear();
+      _personas = [];
+      _asistieronIds = {};
     });
 
-    if (cap == null) {
-      setState(() {
-        _empresa = null;
-        _personas = [];
-      });
-      return;
-    }
+    if (cap == null) return;
 
-    if (cap.empresaId != null) {
-      final empresa = await DbHelper.instance.getEmpresa(cap.empresaId!);
-      if (mounted) {
-        setState(() => _empresa = empresa);
-      }
-      await _cargarPersonas(empresa);
-    } else {
-      setState(() {
-        _empresa = null;
-        _personas = [];
-      });
-    }
-  }
-
-  Future<void> _onEmpresaSelected(Empresa? empresa) async {
-    setState(() {
-      _empresa = empresa;
-      _empleado = null;
-      _foto = null;
-      _busqueda.clear();
-    });
-    await _cargarPersonas(empresa);
-  }
-
-  Future<void> _cargarPersonas(Empresa? empresa) async {
-    if (empresa?.id == null) {
-      setState(() => _personas = []);
-      return;
-    }
-    final personas = await DbHelper.instance.getEmpleados(
-      empresaId: empresa!.id,
-      soloActivos: true,
-      esExterno: _esExterno,
+    final personas = await DbHelper.instance.getEmpleados(soloActivos: true);
+    final asistieron = await DbHelper.instance.getEmpleadoIdsAsistenciaCapacitacion(
+      cap.id!,
     );
-    if (mounted) setState(() => _personas = personas);
-  }
-
-  Future<void> _onTipoPersonaChanged(bool esExterno) async {
-    if (_esExterno == esExterno) return;
-    setState(() {
-      _esExterno = esExterno;
-      _empleado = null;
-      _foto = null;
-      _busqueda.clear();
-    });
-    await _cargarPersonas(_empresa);
+    if (mounted) {
+      setState(() {
+        _personas = personas;
+        _asistieronIds = asistieron;
+      });
+    }
   }
 
   List<Empleado> get _personasFiltradas {
@@ -148,9 +103,21 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
         nombre: p.nombre,
         tipoDocumento: p.tipoDocumento,
         numeroDocumento: p.numeroDocumento,
+        cargo: p.cargo,
         query: _busqueda.text,
       );
     }).toList();
+  }
+
+  String _personaSubtitle(Empleado persona) {
+    final partes = <String>[
+      persona.tipoPersonaLabel,
+      if (persona.empresaNombre != null && persona.empresaNombre!.isNotEmpty)
+        persona.empresaNombre!,
+      if (persona.cargo.isNotEmpty) persona.cargo,
+      persona.documentoLabel,
+    ];
+    return partes.join(' · ');
   }
 
   Future<void> _tomarFoto() async {
@@ -209,6 +176,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
           empleadoId: _empleado!.id!,
           fechaHora: DateTime.now(),
           fotoPath: fotoPath,
+          empleadoCargo: _empleado!.cargo,
         ),
       );
 
@@ -221,6 +189,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
           ),
         );
         setState(() {
+          _asistieronIds.add(_empleado!.id!);
           _empleado = null;
           _foto = null;
           _busqueda.clear();
@@ -237,15 +206,11 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
     }
   }
 
-  bool get _needsEmpresaPicker =>
-      _capacitacion != null && _capacitacion!.empresaId == null;
-
   bool get _canSave =>
       _capacitacion != null &&
       _empleado != null &&
       _foto != null &&
-      !_saving &&
-      (!_needsEmpresaPicker || _empresa != null);
+      !_saving;
 
   @override
   Widget build(BuildContext context) {
@@ -288,136 +253,125 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           children: [
-          const _SectionTitle('1. Capacitacion'),
-          DropdownButtonFormField<Capacitacion>(
-            initialValue: _capacitacion,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: 'Seleccione capacitacion',
-            ),
-            items: _capacitaciones
-                .map(
-                  (c) => DropdownMenuItem(
-                    value: c,
-                    child: Text('${c.nombre} (${dateFormat.format(c.fecha)})'),
-                  ),
-                )
-                .toList(),
-            onChanged: _onCapacitacionSelected,
-          ),
-          if (_capacitacion != null) ...[
-            const SizedBox(height: 12),
-            Card(
-              color: Colors.blue.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _capacitacion!.nombre,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text('Expositor: ${_capacitacion!.expositor}'),
-                    Text('Temas: ${_capacitacion!.temas}'),
-                    if (_capacitacion!.empresaNombre != null)
-                      Text('Empresa: ${_capacitacion!.empresaNombre}'),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
-          if (_needsEmpresaPicker) ...[
-            const _SectionTitle('2. Empresa'),
-            DropdownButtonFormField<Empresa>(
-              initialValue: _empresa,
+            const _SectionTitle('1. Capacitacion'),
+            DropdownButtonFormField<Capacitacion>(
+              initialValue: _capacitacion,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: 'Seleccione empresa',
+                hintText: 'Seleccione capacitacion',
               ),
-              items: _empresas
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e.nombre)))
-                  .toList(),
-              onChanged: _onEmpresaSelected,
-            ),
-            const SizedBox(height: 20),
-          ],
-          _SectionTitle(_needsEmpresaPicker ? '3. Persona' : '2. Persona'),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: false, label: Text('Internos'), icon: Icon(Icons.badge)),
-              ButtonSegment(value: true, label: Text('Externos'), icon: Icon(Icons.person_outline)),
-            ],
-            selected: {_esExterno},
-            onSelectionChanged: _capacitacion == null ||
-                    (_needsEmpresaPicker && _empresa == null)
-                ? null
-                : (s) => _onTipoPersonaChanged(s.first),
-          ),
-          const SizedBox(height: 12),
-          PersonaSearchField(
-            controller: _busqueda,
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 8),
-          if (_capacitacion == null)
-            const Text('Seleccione una capacitacion primero')
-          else if (_needsEmpresaPicker && _empresa == null)
-            const Text('Seleccione una empresa primero')
-          else if (filtradas.isEmpty)
-            Text(
-              _personas.isEmpty
-                  ? 'No hay personas en esta empresa'
-                  : 'Sin coincidencias',
-            )
-          else
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 220),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: filtradas.length,
-                itemBuilder: (context, index) {
-                  final persona = filtradas[index];
-                  final selected = _empleado?.id == persona.id;
-                  return Card(
-                    color: selected ? Colors.blue.shade50 : null,
-                    child: ListTile(
-                      selected: selected,
-                      title: Text(persona.nombre),
-                      subtitle: Text(persona.documentoLabel),
-                      trailing: selected
-                          ? const Icon(Icons.check_circle, color: Colors.blue)
-                          : null,
-                      onTap: () => setState(() {
-                        _empleado = persona;
-                        _foto = null;
-                      }),
+              items: _capacitaciones
+                  .map(
+                    (c) => DropdownMenuItem(
+                      value: c,
+                      child: Text('${c.nombre} (${dateFormat.format(c.fecha)})'),
                     ),
-                  );
-                },
-              ),
+                  )
+                  .toList(),
+              onChanged: _onCapacitacionSelected,
             ),
-          const SizedBox(height: 20),
-          _SectionTitle(_needsEmpresaPicker ? '4. Foto' : '3. Foto'),
-          if (_foto != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(
-                _foto!,
-                height: 220,
-                width: double.infinity,
-                fit: BoxFit.cover,
+            if (_capacitacion != null) ...[
+              const SizedBox(height: 12),
+              Card(
+                color: Colors.blue.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _capacitacion!.nombre,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Expositor: ${_capacitacion!.expositor}'),
+                      Text('Temas: ${_capacitacion!.temas}'),
+                      if (_capacitacion!.empresaNombre != null)
+                        Text('Organiza: ${_capacitacion!.empresaNombre}'),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Pueden asistir internos y externos de cualquier empresa.',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+            ],
+            const SizedBox(height: 20),
+            const _SectionTitle('2. Persona'),
+            PersonaSearchField(
+              controller: _busqueda,
+              hintText: 'Buscar por nombre, cargo o documento...',
+              onChanged: (_) => setState(() {}),
             ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _empleado == null ? null : _tomarFoto,
-            icon: const Icon(Icons.camera_alt),
-            label: Text(_foto == null ? 'Tomar foto' : 'Tomar otra foto'),
-          ),
-        ],
+            const SizedBox(height: 8),
+            if (_capacitacion == null)
+              const Text('Seleccione una capacitacion primero')
+            else if (filtradas.isEmpty)
+              Text(
+                _personas.isEmpty
+                    ? 'No hay personas registradas'
+                    : 'Sin coincidencias',
+              )
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: filtradas.length,
+                  itemBuilder: (context, index) {
+                    final persona = filtradas[index];
+                    final selected = _empleado?.id == persona.id;
+                    final yaAsistio = _asistieronIds.contains(persona.id);
+                    return Card(
+                      color: selected
+                          ? Colors.blue.shade50
+                          : yaAsistio
+                              ? Colors.green.shade50
+                              : null,
+                      child: ListTile(
+                        selected: selected,
+                        title: Text(persona.nombre),
+                        subtitle: Text(_personaSubtitle(persona)),
+                        trailing: yaAsistio
+                            ? const Chip(
+                                label: Text('Ya asistio'),
+                                visualDensity: VisualDensity.compact,
+                              )
+                            : selected
+                                ? const Icon(Icons.check_circle, color: Colors.blue)
+                                : null,
+                        onTap: yaAsistio
+                            ? null
+                            : () => setState(() {
+                                  _empleado = persona;
+                                  _foto = null;
+                                }),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 20),
+            const _SectionTitle('3. Foto'),
+            if (_foto != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  _foto!,
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _empleado == null ? null : _tomarFoto,
+              icon: const Icon(Icons.camera_alt),
+              label: Text(_foto == null ? 'Tomar foto' : 'Tomar otra foto'),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: SafeArea(

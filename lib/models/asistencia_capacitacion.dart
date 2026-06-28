@@ -9,6 +9,7 @@ class AsistenciaCapacitacion {
     this.empleadoTipoDocumento,
     this.empleadoNumeroDocumento,
     this.empleadoEsExterno,
+    this.empleadoCargo,
     this.empresaNombre,
     this.capacitacionNombre,
   });
@@ -22,6 +23,7 @@ class AsistenciaCapacitacion {
   final String? empleadoTipoDocumento;
   final String? empleadoNumeroDocumento;
   final bool? empleadoEsExterno;
+  final String? empleadoCargo;
   final String? empresaNombre;
   final String? capacitacionNombre;
 
@@ -38,6 +40,7 @@ class AsistenciaCapacitacion {
       'empleado_id': empleadoId,
       'fecha_hora': fechaHora.toIso8601String(),
       'foto_path': fotoPath,
+      'empleado_cargo': empleadoCargo ?? '',
     };
   }
 
@@ -52,6 +55,7 @@ class AsistenciaCapacitacion {
       empleadoTipoDocumento: map['empleado_tipo_documento'] as String?,
       empleadoNumeroDocumento: map['empleado_numero_documento'] as String?,
       empleadoEsExterno: (map['empleado_es_externo'] as int?) == 1,
+      empleadoCargo: map['empleado_cargo'] as String?,
       empresaNombre: map['empresa_nombre'] as String?,
       capacitacionNombre: map['capacitacion_nombre'] as String?,
     );

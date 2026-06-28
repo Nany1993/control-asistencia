@@ -114,6 +114,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
         nombre: p.nombre,
         tipoDocumento: p.tipoDocumento,
         numeroDocumento: p.numeroDocumento,
+        cargo: p.cargo,
         query: _busqueda.text,
       );
     }).toList();
@@ -248,6 +249,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
           motivoSalida: motivoSalida?.value,
           radicado: radicado,
           turnoId: _turno?.id,
+          empleadoCargo: _empleado!.cargo,
         ),
       );
 

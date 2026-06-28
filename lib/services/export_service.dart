@@ -32,7 +32,7 @@ class ExportService {
     final buffer = StringBuffer();
     buffer.write('\uFEFF');
     buffer.writeln(
-      'Empresa,Tipo persona,Empleado,Turno,Tipo documento,Numero documento,Fecha,Hora,Tipo marcacion,Motivo salida,Radicado,Observacion,Ruta foto',
+      'Empresa,Tipo persona,Empleado,Cargo,Turno,Tipo documento,Numero documento,Fecha,Hora,Tipo marcacion,Motivo salida,Radicado,Observacion,Ruta foto',
     );
 
     for (final registro in registros) {
@@ -57,6 +57,7 @@ class ExportService {
       _escape(registro.empresaNombre ?? ''),
       registro.tipoPersonaLabel,
       _escape(registro.empleadoNombre ?? ''),
+      _escape(registro.empleadoCargo ?? ''),
       _escape(registro.turnoNombre ?? ''),
       _escape(registro.empleadoTipoDocumento ?? ''),
       _escape(registro.empleadoNumeroDocumento ?? ''),

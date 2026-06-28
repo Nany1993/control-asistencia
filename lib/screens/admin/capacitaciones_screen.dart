@@ -354,7 +354,7 @@ class _CapacitacionFormDialogState extends State<_CapacitacionFormDialog> {
             DropdownButtonFormField<int?>(
               initialValue: _empresaId,
               decoration: const InputDecoration(
-                labelText: 'Empresa (opcional)',
+                labelText: 'Empresa organizadora (opcional)',
                 border: OutlineInputBorder(),
               ),
               items: [

@@ -39,7 +39,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 8,
+      version: 10,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -107,6 +107,33 @@ class DbHelper {
         if (oldVersion < 8) {
           await _migrateTurnosSinEmpresa(db);
         }
+        if (oldVersion < 9) {
+          await db.execute(
+            "ALTER TABLE empleados ADD COLUMN cargo TEXT NOT NULL DEFAULT ''",
+          );
+        }
+        if (oldVersion < 10) {
+          await db.execute(
+            "ALTER TABLE registros ADD COLUMN empleado_cargo TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            "ALTER TABLE asistencia_capacitacion ADD COLUMN empleado_cargo TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute('''
+            UPDATE registros
+            SET empleado_cargo = (
+              SELECT cargo FROM empleados WHERE empleados.id = registros.empleado_id
+            )
+            WHERE empleado_cargo = ''
+          ''');
+          await db.execute('''
+            UPDATE asistencia_capacitacion
+            SET empleado_cargo = (
+              SELECT cargo FROM empleados WHERE empleados.id = asistencia_capacitacion.empleado_id
+            )
+            WHERE empleado_cargo = ''
+          ''');
+        }
       },
     );
   }
@@ -139,6 +166,7 @@ class DbHelper {
         nombre TEXT NOT NULL,
         tipo_documento TEXT NOT NULL DEFAULT 'CC',
         numero_documento TEXT NOT NULL DEFAULT '',
+        cargo TEXT NOT NULL DEFAULT '',
         es_externo INTEGER NOT NULL DEFAULT 0,
         turno_id INTEGER,
         activo INTEGER NOT NULL DEFAULT 1,
@@ -159,6 +187,7 @@ class DbHelper {
         motivo_salida TEXT,
         radicado TEXT,
         turno_id INTEGER,
+        empleado_cargo TEXT NOT NULL DEFAULT '',
         FOREIGN KEY (empresa_id) REFERENCES empresas(id),
         FOREIGN KEY (empleado_id) REFERENCES empleados(id),
         FOREIGN KEY (turno_id) REFERENCES turnos(id)
@@ -240,6 +269,7 @@ class DbHelper {
         empleado_id INTEGER NOT NULL,
         fecha_hora TEXT NOT NULL,
         foto_path TEXT NOT NULL,
+        empleado_cargo TEXT NOT NULL DEFAULT '',
         FOREIGN KEY (capacitacion_id) REFERENCES capacitaciones(id),
         FOREIGN KEY (empleado_id) REFERENCES empleados(id),
         UNIQUE(capacitacion_id, empleado_id)
@@ -253,6 +283,7 @@ class DbHelper {
              e.tipo_documento AS empleado_tipo_documento,
              e.numero_documento AS empleado_numero_documento,
              e.es_externo AS empleado_es_externo,
+             COALESCE(NULLIF(r.empleado_cargo, ''), e.cargo) AS empleado_cargo,
              emp.nombre AS empresa_nombre,
              t.nombre AS turno_nombre
       FROM registros r
@@ -263,11 +294,13 @@ class DbHelper {
 
   static const _empleadoSelect = '''
       SELECT e.*,
+             emp.nombre AS empresa_nombre,
              (SELECT GROUP_CONCAT(t.nombre, ', ')
               FROM empleado_turnos et
               JOIN turnos t ON t.id = et.turno_id
               WHERE et.empleado_id = e.id) AS turnos_nombre
       FROM empleados e
+      LEFT JOIN empresas emp ON emp.id = e.empresa_id
   ''';
 
   Future<String?> getConfig(String key) async {
@@ -697,6 +730,7 @@ class DbHelper {
              e.tipo_documento AS empleado_tipo_documento,
              e.numero_documento AS empleado_numero_documento,
              e.es_externo AS empleado_es_externo,
+             COALESCE(NULLIF(ac.empleado_cargo, ''), e.cargo) AS empleado_cargo,
              emp.nombre AS empresa_nombre,
              cap.nombre AS capacitacion_nombre
       FROM asistencia_capacitacion ac
@@ -779,6 +813,17 @@ class DbHelper {
       [capacitacionId],
     );
     return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<Set<int>> getEmpleadoIdsAsistenciaCapacitacion(int capacitacionId) async {
+    final db = await database;
+    final rows = await db.query(
+      'asistencia_capacitacion',
+      columns: ['empleado_id'],
+      where: 'capacitacion_id = ?',
+      whereArgs: [capacitacionId],
+    );
+    return rows.map((r) => r['empleado_id'] as int).toSet();
   }
 
   Future<bool> empleadoYaAsistioCapacitacion(

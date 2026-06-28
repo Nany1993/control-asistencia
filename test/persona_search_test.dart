@@ -35,6 +35,16 @@ void main() {
         ),
         isFalse,
       );
+      expect(
+        PersonaSearch.matches(
+          nombre: 'Ana Perez',
+          tipoDocumento: 'CC',
+          numeroDocumento: '12345',
+          cargo: 'Supervisor',
+          query: 'super',
+        ),
+        isTrue,
+      );
     });
   });
 }
