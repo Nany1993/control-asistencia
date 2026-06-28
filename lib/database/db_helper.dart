@@ -761,12 +761,14 @@ class DbHelper {
   }
 
   Future<void> deleteCapacitacion(int id) async {
+    final asistencias = await countAsistenciaCapacitacion(id);
+    if (asistencias > 0) {
+      throw ReferentialIntegrityException(
+        'No se puede eliminar la capacitacion: tiene $asistencias asistencia(s) registrada(s).',
+      );
+    }
+
     final db = await database;
-    await db.delete(
-      'asistencia_capacitacion',
-      where: 'capacitacion_id = ?',
-      whereArgs: [id],
-    );
     await db.delete('capacitaciones', where: 'id = ?', whereArgs: [id]);
   }
 

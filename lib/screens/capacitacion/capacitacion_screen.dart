@@ -96,6 +96,9 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
 
     if (cap.empresaId != null) {
       final empresa = await DbHelper.instance.getEmpresa(cap.empresaId!);
+      if (mounted) {
+        setState(() => _empresa = empresa);
+      }
       await _cargarPersonas(empresa);
     } else {
       setState(() {

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../database/db_helper.dart';
+import '../../database/referential_integrity_exception.dart';
 import '../../models/capacitacion.dart';
 import '../../models/empresa.dart';
 import '../../services/capacitacion_service.dart';
@@ -60,24 +61,40 @@ class _CapacitacionesScreenState extends State<CapacitacionesScreen> {
   }
 
   Future<void> _delete(Capacitacion cap) async {
+    final asistencias = await DbHelper.instance.countAsistenciaCapacitacion(cap.id!);
+    if (!mounted) return;
+
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar capacitacion'),
-        content: Text('Eliminar "${cap.nombre}" y sus asistencias?'),
+        content: Text(
+          asistencias > 0
+              ? 'No se puede eliminar "${cap.nombre}" porque tiene '
+                  '$asistencias asistencia(s) registrada(s).'
+              : 'Eliminar "${cap.nombre}"? Solo es posible si no tiene asistencias.',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
+          if (asistencias == 0)
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Eliminar'),
+            ),
         ],
       ),
     );
     if (ok != true) return;
-    await DbHelper.instance.deleteCapacitacion(cap.id!);
-    await _load();
+
+    try {
+      await DbHelper.instance.deleteCapacitacion(cap.id!);
+      await _load();
+    } on ReferentialIntegrityException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
   }
 
   Future<void> _openForm([Capacitacion? cap]) async {
