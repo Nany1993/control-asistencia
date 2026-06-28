@@ -1,7 +1,7 @@
 name: control_asistencia
 description: Control de asistencia offline con foto, entrada/salida y modulo admin.
 publish_to: 'none'
-version: 1.8.6+24
+version: 1.8.7+25
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

@@ -37,7 +37,7 @@ class CapacitacionExportService {
     final buffer = StringBuffer();
     buffer.write('\uFEFF');
     buffer.writeln(
-      'CAPACITACION,TEMAS,EXPOSITOR,FECHA SESION,ESTADO,RESULTADO,EMPRESA,'
+      'CAPACITACION,TEMAS,DESCRIPCION,EXPOSITOR,FECHA SESION,ESTADO,RESULTADO,EMPRESA,'
       'TIPO PERSONA,NOMBRE,CARGO,TIPO DOC,NUMERO DOC,HORA REGISTRO,RUTA FOTO',
     );
 
@@ -117,6 +117,12 @@ class CapacitacionExportService {
                 ),
               ),
             ),
+          ],
+          if (cap.tieneDescripcion) ...[
+            pw.SizedBox(height: 20),
+            _sectionTitle('Descripcion'),
+            pw.SizedBox(height: 8),
+            _descriptionBox(cap.descripcion),
           ],
           pw.SizedBox(height: 24),
           if (cap.resultado == ResultadoCapacitacion.noEjecutada.value)
@@ -288,7 +294,7 @@ class CapacitacionExportService {
 
   pw.Widget _infoCard(Capacitacion cap, int totalAsistentes) {
     final filas = <(String, String)>[
-      ('Temas Tratados', cap.temas),
+      ('Temas Generales', cap.temas),
       ('Expositor', cap.expositor),
       ('Fecha Programada', _dateFormat.format(cap.fecha)),
       ('Estado', cap.estadoLabel),
@@ -332,6 +338,22 @@ class CapacitacionExportService {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  pw.Widget _descriptionBox(String text) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(14),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: PdfColors.grey300),
+      ),
+      child: pw.Text(
+        _pdfText(text),
+        style: pw.TextStyle(fontSize: 10.5, color: _grisTexto, lineSpacing: 1.35),
       ),
     );
   }
@@ -442,6 +464,7 @@ class CapacitacionExportService {
     return [
       _escape(_csvCell(cap.nombre)),
       _escape(_csvCell(cap.temas)),
+      _escape(_csvCell(cap.descripcion)),
       _escape(_csvCell(cap.expositor)),
       _dateFormat.format(cap.fecha),
       _csvCell(cap.estadoLabel),
@@ -461,6 +484,7 @@ class CapacitacionExportService {
     return [
       _escape(_csvCell(cap.nombre)),
       _escape(_csvCell(cap.temas)),
+      _escape(_csvCell(cap.descripcion)),
       _escape(_csvCell(cap.expositor)),
       _dateFormat.format(cap.fecha),
       _csvCell(cap.estadoLabel),

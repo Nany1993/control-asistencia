@@ -66,7 +66,7 @@ class _ExportScreenState extends State<ExportScreen> {
         .split(' ')
         .where((t) => t.isNotEmpty);
     final haystack = PersonaSearch.normalize(
-      '${cap.nombre} ${cap.temas} ${cap.expositor} '
+      '${cap.nombre} ${cap.temas} ${cap.descripcion} ${cap.expositor} '
       '${cap.empresaNombre ?? ''} ${_dateFormat.format(cap.fecha)} '
       '${cap.estadoLabel} ${cap.resultadoLabel ?? ''}',
     );

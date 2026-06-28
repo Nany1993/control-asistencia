@@ -4,7 +4,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.8.6
+**Version actual:** 1.8.7
 
 ## Funciones
 
@@ -35,6 +35,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 - Flujo kiosco: capacitacion → **buscar** persona → foto → registrar (sin listar asistencias previas).
 - Busqueda por nombre, empresa, cargo o documento.
 - Marcacion con foto obligatoria solo el dia programado.
+- **Temas generales** (resumen breve) y **descripcion amplia** (detalle opcional) al crear la capacitacion.
 - Cierre automatico o manual; export PDF/CSV.
 - El **informe PDF** (diseno con encabezado, tabla y evidencia fotografica) solo se exporta si la capacitacion esta **cerrada** (si esta abierta, la app ofrece cerrarla antes).
 

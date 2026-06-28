@@ -18,6 +18,7 @@ class Capacitacion {
     this.id,
     required this.nombre,
     required this.temas,
+    this.descripcion = '',
     required this.expositor,
     required this.fecha,
     this.empresaId,
@@ -34,6 +35,7 @@ class Capacitacion {
   final int? id;
   final String nombre;
   final String temas;
+  final String descripcion;
   final String expositor;
   final DateTime fecha;
   final int? empresaId;
@@ -47,6 +49,8 @@ class Capacitacion {
   final int? totalAsistentes;
 
   DateTime get fechaDia => DateTime(fecha.year, fecha.month, fecha.day);
+
+  bool get tieneDescripcion => descripcion.trim().isNotEmpty;
 
   bool get tieneFotoGeneral =>
       fotoGeneralPath != null && fotoGeneralPath!.isNotEmpty;
@@ -74,6 +78,7 @@ class Capacitacion {
       'id': id,
       'nombre': TextoDisplay.mayus(nombre),
       'temas': TextoDisplay.mayus(temas),
+      'descripcion': TextoDisplay.mayus(descripcion),
       'expositor': TextoDisplay.mayus(expositor),
       'fecha': dateKey(fecha),
       'empresa_id': empresaId,
@@ -101,6 +106,7 @@ class Capacitacion {
       id: map['id'] as int?,
       nombre: TextoDisplay.mayus(map['nombre'] as String),
       temas: TextoDisplay.mayus(map['temas'] as String),
+      descripcion: TextoDisplay.mayus(map['descripcion'] as String? ?? ''),
       expositor: TextoDisplay.mayus(map['expositor'] as String),
       fecha: fecha,
       empresaId: map['empresa_id'] as int?,
@@ -121,6 +127,7 @@ class Capacitacion {
     int? id,
     String? nombre,
     String? temas,
+    String? descripcion,
     String? expositor,
     DateTime? fecha,
     int? empresaId,
@@ -141,6 +148,7 @@ class Capacitacion {
       id: id ?? this.id,
       nombre: nombre ?? this.nombre,
       temas: temas ?? this.temas,
+      descripcion: descripcion ?? this.descripcion,
       expositor: expositor ?? this.expositor,
       fecha: fecha ?? this.fecha,
       empresaId: clearEmpresaId ? null : (empresaId ?? this.empresaId),

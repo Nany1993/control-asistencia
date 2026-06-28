@@ -41,7 +41,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 13,
+      version: 14,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -199,6 +199,11 @@ class DbHelper {
             WHERE empresa_nombre = ''
           ''');
         }
+        if (oldVersion < 14) {
+          await db.execute(
+            "ALTER TABLE capacitaciones ADD COLUMN descripcion TEXT NOT NULL DEFAULT ''",
+          );
+        }
       },
     );
   }
@@ -320,6 +325,7 @@ class DbHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL,
         temas TEXT NOT NULL,
+        descripcion TEXT NOT NULL DEFAULT '',
         expositor TEXT NOT NULL,
         fecha TEXT NOT NULL,
         empresa_id INTEGER,

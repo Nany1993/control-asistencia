@@ -360,7 +360,9 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text('Expositor: ${_capacitacion!.expositor}'),
-                      Text('Temas: ${_capacitacion!.temas}'),
+                      Text('Temas generales: ${_capacitacion!.temas}'),
+                      if (_capacitacion!.tieneDescripcion)
+                        Text('Descripcion: ${_capacitacion!.descripcion}'),
                       if (_capacitacion!.empresaNombre != null)
                         Text('Organiza: ${_capacitacion!.empresaNombre}'),
                       const SizedBox(height: 4),

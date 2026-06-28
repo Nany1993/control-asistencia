@@ -197,6 +197,7 @@ class _CapacitacionFormDialog extends StatefulWidget {
 class _CapacitacionFormDialogState extends State<_CapacitacionFormDialog> {
   final _nombre = TextEditingController();
   final _temas = TextEditingController();
+  final _descripcion = TextEditingController();
   final _expositor = TextEditingController();
   final _picker = ImagePicker();
 
@@ -215,6 +216,7 @@ class _CapacitacionFormDialogState extends State<_CapacitacionFormDialog> {
     if (cap != null) {
       _nombre.text = cap.nombre;
       _temas.text = cap.temas;
+      _descripcion.text = cap.descripcion;
       _expositor.text = cap.expositor;
       _fecha = cap.fecha;
       _empresaId = cap.empresaId;
@@ -227,6 +229,7 @@ class _CapacitacionFormDialogState extends State<_CapacitacionFormDialog> {
   void dispose() {
     _nombre.dispose();
     _temas.dispose();
+    _descripcion.dispose();
     _expositor.dispose();
     super.dispose();
   }
@@ -262,6 +265,7 @@ class _CapacitacionFormDialogState extends State<_CapacitacionFormDialog> {
   Future<void> _save() async {
     final nombre = _nombre.text.trim();
     final temas = _temas.text.trim();
+    final descripcion = _descripcion.text.trim();
     final expositor = _expositor.text.trim();
     if (nombre.isEmpty || temas.isEmpty || expositor.isEmpty) {
       setState(() => _error = 'Nombre, temas y expositor son obligatorios');
@@ -278,6 +282,7 @@ class _CapacitacionFormDialogState extends State<_CapacitacionFormDialog> {
         id: widget.capacitacion?.id,
         nombre: nombre,
         temas: temas,
+        descripcion: descripcion,
         expositor: expositor,
         fecha: _fecha,
         empresaId: _empresaId,
@@ -336,9 +341,10 @@ class _CapacitacionFormDialogState extends State<_CapacitacionFormDialog> {
             const SizedBox(height: 12),
             TextField(
               controller: _temas,
-              maxLines: 3,
+              maxLines: 2,
               decoration: const InputDecoration(
-                labelText: 'Temas tratados *',
+                labelText: 'Temas generales *',
+                hintText: 'Ej: Seguridad industrial, primeros auxilios',
                 border: OutlineInputBorder(),
                 alignLabelWithHint: true,
               ),
@@ -388,6 +394,17 @@ class _CapacitacionFormDialogState extends State<_CapacitacionFormDialog> {
               onPressed: _tomarFotoGeneral,
               icon: const Icon(Icons.photo_camera),
               label: Text(fotoMostrar == null ? 'Tomar foto general' : 'Cambiar foto'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descripcion,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Descripcion amplia (opcional)',
+                hintText: 'Detalle del contenido, objetivos, metodologia, etc.',
+                border: OutlineInputBorder(),
+                alignLabelWithHint: true,
+              ),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),
