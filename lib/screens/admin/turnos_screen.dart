@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../database/db_helper.dart';
-import '../../models/empresa.dart';
 import '../../models/turno.dart';
 
 class TurnosScreen extends StatefulWidget {
@@ -12,31 +11,18 @@ class TurnosScreen extends StatefulWidget {
 }
 
 class _TurnosScreenState extends State<TurnosScreen> {
-  List<Empresa> _empresas = [];
   List<Turno> _turnos = [];
-  int? _empresaId;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _init();
-  }
-
-  Future<void> _init() async {
-    final empresas = await DbHelper.instance.getEmpresas();
-    if (mounted) {
-      setState(() {
-        _empresas = empresas;
-        _empresaId = empresas.isNotEmpty ? empresas.first.id : null;
-      });
-      await _load();
-    }
+    _load();
   }
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final data = await DbHelper.instance.getTurnos(empresaId: _empresaId);
+    final data = await DbHelper.instance.getTurnos();
     if (mounted) {
       setState(() {
         _turnos = data;
@@ -46,19 +32,9 @@ class _TurnosScreenState extends State<TurnosScreen> {
   }
 
   Future<void> _openForm([Turno? turno]) async {
-    if (_empresaId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Primero cree una empresa')),
-      );
-      return;
-    }
-
     final saved = await showDialog<bool>(
       context: context,
-      builder: (_) => _TurnoFormDialog(
-        empresaId: _empresaId!,
-        turno: turno,
-      ),
+      builder: (_) => _TurnoFormDialog(turno: turno),
     );
     if (saved == true) await _load();
   }
@@ -96,69 +72,53 @@ class _TurnosScreenState extends State<TurnosScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Nuevo turno'),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: DropdownButtonFormField<int?>(
-              initialValue: _empresaId,
-              decoration: const InputDecoration(
-                labelText: 'Empresa',
-                border: OutlineInputBorder(),
-              ),
-              items: _empresas
-                  .map((e) => DropdownMenuItem(value: e.id, child: Text(e.nombre)))
-                  .toList(),
-              onChanged: (v) async {
-                setState(() => _empresaId = v);
-                await _load();
-              },
-            ),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _turnos.isEmpty
-                    ? const Center(child: Text('No hay turnos en esta empresa'))
-                    : ListView.builder(
-                        itemCount: _turnos.length,
-                        itemBuilder: (context, index) {
-                          final turno = _turnos[index];
-                          return ListTile(
-                            leading: const CircleAvatar(child: Icon(Icons.schedule)),
-                            title: Text(turno.nombre),
-                            subtitle: Text(
-                              '${turno.horarioLabel} · Tol. ${turno.toleranciaMinutos} min · '
-                              '${diasSemanaTexto(turno.diasSemana)}'
-                              '${turno.tieneHorarioAlmuerzo ? ' · Almuerzo ${turno.horaAlmuerzoInicio}-${turno.horaAlmuerzoFin}' : ''}',
-                            ),
-                            trailing: PopupMenuButton<String>(
-                              onSelected: (v) {
-                                if (v == 'edit') _openForm(turno);
-                                if (v == 'delete') _delete(turno);
-                              },
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(value: 'edit', child: Text('Editar')),
-                                PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-                              ],
-                            ),
-                          );
-                        },
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _turnos.isEmpty
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'No hay turnos configurados. Los turnos son compartidos entre todas las empresas.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _turnos.length,
+                  itemBuilder: (context, index) {
+                    final turno = _turnos[index];
+                    return Card(
+                      child: ListTile(
+                        leading: const CircleAvatar(child: Icon(Icons.schedule)),
+                        title: Text(turno.nombre),
+                        subtitle: Text(
+                          '${turno.horarioLabel} · Tol. ${turno.toleranciaMinutos} min · '
+                          '${diasSemanaTexto(turno.diasSemana)}'
+                          '${turno.tieneHorarioAlmuerzo ? ' · Almuerzo ${turno.horaAlmuerzoInicio}-${turno.horaAlmuerzoFin}' : ''}',
+                        ),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (v) {
+                            if (v == 'edit') _openForm(turno);
+                            if (v == 'delete') _delete(turno);
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Editar')),
+                            PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                          ],
+                        ),
                       ),
-          ),
-        ],
-      ),
+                    );
+                  },
+                ),
     );
   }
 }
 
 class _TurnoFormDialog extends StatefulWidget {
-  const _TurnoFormDialog({
-    required this.empresaId,
-    this.turno,
-  });
+  const _TurnoFormDialog({this.turno});
 
-  final int empresaId;
   final Turno? turno;
 
   @override
@@ -253,7 +213,6 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
     final dias = _dias.toList()..sort();
     final turno = Turno(
       id: widget.turno?.id,
-      empresaId: widget.empresaId,
       nombre: nombre,
       horaEntrada: _formatTime(_entrada),
       horaSalida: _formatTime(_salida),

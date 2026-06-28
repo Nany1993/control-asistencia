@@ -4,7 +4,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.6.5
+**Version actual:** 1.7.0
 
 ## Funciones
 
@@ -146,5 +146,7 @@ git push
 ## Notas
 
 - La hora de marcacion usa el reloj del dispositivo.
-- Al eliminar una empresa se borran sus empleados, turnos, registros y capacitaciones asociadas.
+- Los **turnos** son compartidos entre todas las empresas (no estan ligados a una sola).
+- Al editar un empleado o externo puede **cambiar de empresa**; los registros anteriores conservan la empresa y turno con que fueron marcados.
+- Al eliminar una empresa se borran sus empleados, registros y capacitaciones asociadas (los turnos compartidos no se eliminan).
 - El APK generado localmente no se sube al repositorio (ver `.gitignore`).

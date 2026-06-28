@@ -38,7 +38,7 @@ class AdminHomeScreen extends StatelessWidget {
           _AdminTile(
             icon: Icons.schedule,
             title: 'Turnos',
-            subtitle: 'Horarios para empleados internos',
+            subtitle: 'Horarios compartidos entre todas las empresas',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const TurnosScreen()),
             ),

@@ -38,7 +38,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -103,6 +103,9 @@ class DbHelper {
             SELECT id, turno_id FROM empleados WHERE turno_id IS NOT NULL
           ''');
         }
+        if (oldVersion < 8) {
+          await _migrateTurnosSinEmpresa(db);
+        }
       },
     );
   }
@@ -119,15 +122,13 @@ class DbHelper {
     await db.execute('''
       CREATE TABLE turnos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        empresa_id INTEGER NOT NULL,
         nombre TEXT NOT NULL,
         hora_entrada TEXT NOT NULL,
         hora_salida TEXT NOT NULL,
         tolerancia_minutos INTEGER NOT NULL DEFAULT 15,
         dias_semana TEXT NOT NULL DEFAULT '1,2,3,4,5',
         hora_almuerzo_inicio TEXT,
-        hora_almuerzo_fin TEXT,
-        FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+        hora_almuerzo_fin TEXT
       )
     ''');
     await db.execute('''
@@ -170,6 +171,35 @@ class DbHelper {
     ''');
     await _createCapacitacionTables(db);
     await _createEmpleadoTurnosTable(db);
+  }
+
+  Future<void> _migrateTurnosSinEmpresa(Database db) async {
+    await db.execute('PRAGMA foreign_keys = OFF');
+    await db.execute('''
+      CREATE TABLE turnos_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        hora_entrada TEXT NOT NULL,
+        hora_salida TEXT NOT NULL,
+        tolerancia_minutos INTEGER NOT NULL DEFAULT 15,
+        dias_semana TEXT NOT NULL DEFAULT '1,2,3,4,5',
+        hora_almuerzo_inicio TEXT,
+        hora_almuerzo_fin TEXT
+      )
+    ''');
+    await db.execute('''
+      INSERT INTO turnos_new (
+        id, nombre, hora_entrada, hora_salida, tolerancia_minutos,
+        dias_semana, hora_almuerzo_inicio, hora_almuerzo_fin
+      )
+      SELECT
+        id, nombre, hora_entrada, hora_salida, tolerancia_minutos,
+        dias_semana, hora_almuerzo_inicio, hora_almuerzo_fin
+      FROM turnos
+    ''');
+    await db.execute('DROP TABLE turnos');
+    await db.execute('ALTER TABLE turnos_new RENAME TO turnos');
+    await db.execute('PRAGMA foreign_keys = ON');
   }
 
   Future<void> _createEmpleadoTurnosTable(Database db) async {
@@ -304,17 +334,14 @@ class DbHelper {
       await deleteCapacitacion(row['id'] as int);
     }
     await db.delete('empresas', where: 'id = ?', whereArgs: [id]);
-    await db.delete('turnos', where: 'empresa_id = ?', whereArgs: [id]);
     await db.delete('empleados', where: 'empresa_id = ?', whereArgs: [id]);
     await db.delete('registros', where: 'empresa_id = ?', whereArgs: [id]);
   }
 
-  Future<List<Turno>> getTurnos({int? empresaId}) async {
+  Future<List<Turno>> getTurnos() async {
     final db = await database;
     final rows = await db.query(
       'turnos',
-      where: empresaId != null ? 'empresa_id = ?' : null,
-      whereArgs: empresaId != null ? [empresaId] : null,
       orderBy: 'nombre COLLATE NOCASE ASC',
     );
     return rows.map(Turno.fromMap).toList();

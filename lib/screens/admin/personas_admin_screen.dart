@@ -97,7 +97,6 @@ class _PersonasAdminScreenState extends State<PersonasAdminScreen> {
         empresaIdInicial: persona?.empresaId ?? _empresaId ?? _empresas.first.id!,
         esExterno: widget.esExterno,
         persona: persona,
-        permitirCambiarEmpresa: widget.esExterno,
       ),
     );
     if (saved == true) await _load();
@@ -216,14 +215,12 @@ class _PersonaFormDialog extends StatefulWidget {
     required this.empresaIdInicial,
     required this.esExterno,
     this.persona,
-    required this.permitirCambiarEmpresa,
   });
 
   final List<Empresa> empresas;
   final int empresaIdInicial;
   final bool esExterno;
   final Empleado? persona;
-  final bool permitirCambiarEmpresa;
 
   @override
   State<_PersonaFormDialog> createState() => _PersonaFormDialogState();
@@ -257,7 +254,7 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
 
   Future<void> _loadTurnos() async {
     setState(() => _loadingTurnos = true);
-    final turnos = await DbHelper.instance.getTurnos(empresaId: _empresaId);
+    final turnos = await DbHelper.instance.getTurnos();
     Set<int> seleccionados = {};
     if (widget.persona?.id != null) {
       seleccionados = (await DbHelper.instance.getTurnoIdsForEmpleado(
@@ -336,28 +333,32 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (widget.permitirCambiarEmpresa) ...[
-              DropdownButtonFormField<int>(
-                initialValue: _empresaId,
-                decoration: const InputDecoration(
-                  labelText: 'Empresa',
-                  border: OutlineInputBorder(),
-                ),
-                items: widget.empresas
-                    .map(
-                      (e) => DropdownMenuItem(
-                        value: e.id,
-                        child: Text(e.nombre),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) async {
-                  setState(() => _empresaId = v ?? _empresaId);
-                  if (!widget.esExterno) await _loadTurnos();
-                },
+            DropdownButtonFormField<int>(
+              initialValue: _empresaId,
+              decoration: const InputDecoration(
+                labelText: 'Empresa',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 12),
+              items: widget.empresas
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e.id,
+                      child: Text(e.nombre),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) {
+                setState(() => _empresaId = v ?? _empresaId);
+              },
+            ),
+            if (widget.persona != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Los registros anteriores conservan la empresa y turno con que fueron marcados.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
+            const SizedBox(height: 12),
             TextField(
               controller: _nombre,
               decoration: const InputDecoration(labelText: 'Nombre completo'),

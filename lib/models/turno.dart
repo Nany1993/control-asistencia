@@ -1,7 +1,6 @@
 class Turno {
   const Turno({
     this.id,
-    required this.empresaId,
     required this.nombre,
     required this.horaEntrada,
     required this.horaSalida,
@@ -12,7 +11,6 @@ class Turno {
   });
 
   final int? id;
-  final int empresaId;
   final String nombre;
   final String horaEntrada;
   final String horaSalida;
@@ -38,7 +36,6 @@ class Turno {
 
   Turno copyWith({
     int? id,
-    int? empresaId,
     String? nombre,
     String? horaEntrada,
     String? horaSalida,
@@ -50,7 +47,6 @@ class Turno {
   }) {
     return Turno(
       id: id ?? this.id,
-      empresaId: empresaId ?? this.empresaId,
       nombre: nombre ?? this.nombre,
       horaEntrada: horaEntrada ?? this.horaEntrada,
       horaSalida: horaSalida ?? this.horaSalida,
@@ -65,7 +61,6 @@ class Turno {
   Map<String, Object?> toMap() {
     return {
       'id': id,
-      'empresa_id': empresaId,
       'nombre': nombre,
       'hora_entrada': horaEntrada,
       'hora_salida': horaSalida,
@@ -79,7 +74,6 @@ class Turno {
   factory Turno.fromMap(Map<String, Object?> map) {
     return Turno(
       id: map['id'] as int?,
-      empresaId: map['empresa_id'] as int,
       nombre: map['nombre'] as String,
       horaEntrada: map['hora_entrada'] as String,
       horaSalida: map['hora_salida'] as String,
