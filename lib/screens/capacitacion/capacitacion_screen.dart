@@ -100,6 +100,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
   }
 
   List<Empleado> get _personasFiltradas {
+    if (_busqueda.text.trim().isEmpty) return [];
     return _personas.where((p) {
       return PersonaSearch.matches(
         nombre: p.nombre,
@@ -109,7 +110,23 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
         empresaNombre: p.empresaNombre ?? '',
         query: _busqueda.text,
       );
-    }).toList();
+    }).take(10).toList();
+  }
+
+  void _seleccionarPersona(Empleado persona) {
+    if (_asistieronIds.contains(persona.id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${persona.nombre} ya registro asistencia'),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _empleado = persona;
+      _foto = null;
+      _busqueda.clear();
+    });
   }
 
   String _personaSubtitle(Empleado persona) {
@@ -260,6 +277,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
   @override
   Widget build(BuildContext context) {
     final filtradas = _personasFiltradas;
+    final buscando = _busqueda.text.trim().isNotEmpty;
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     if (_loading) {
@@ -347,81 +365,50 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
             const _SectionTitle('2. Persona'),
             PersonaSearchField(
               controller: _busqueda,
-              hintText: 'Buscar por nombre, empresa, cargo o documento...',
+              hintText: 'Escriba nombre, empresa, cargo o documento...',
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 8),
             if (_capacitacion == null)
               const Text('Seleccione una capacitacion primero')
-            else if (filtradas.isEmpty)
-              Text(
-                _personas.isEmpty
-                    ? 'No hay personas registradas'
-                    : 'Sin coincidencias',
-              )
-            else
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 280),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: filtradas.length,
-                  itemBuilder: (context, index) {
-                    final persona = filtradas[index];
-                    final selected = _empleado?.id == persona.id;
-                    final yaAsistio = _asistieronIds.contains(persona.id);
-                    return Card(
-                      color: selected
-                          ? Colors.blue.shade50
-                          : yaAsistio
-                              ? Colors.green.shade50
-                              : null,
-                      child: ListTile(
-                        selected: selected,
-                        title: Text(persona.nombre),
-                        subtitle: _personaListTileSubtitle(persona),
-                        trailing: yaAsistio
-                            ? const Chip(
-                                label: Text('Ya asistio'),
-                                visualDensity: VisualDensity.compact,
-                              )
-                            : selected
-                                ? const Icon(Icons.check_circle, color: Colors.blue)
-                                : null,
-                        onTap: yaAsistio
-                            ? null
-                            : () => setState(() {
-                                  _empleado = persona;
-                                  _foto = null;
-                                }),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            if (_empleado != null) ...[
-              const SizedBox(height: 12),
+            else if (_empleado != null) ...[
               Card(
                 color: Colors.blue.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _empleado!.nombre,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      if (_empleado!.cargo.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text('Cargo: ${_empleado!.cargo}'),
-                      ],
-                      const SizedBox(height: 4),
-                      Text(_personaSubtitle(_empleado!)),
-                    ],
+                child: ListTile(
+                  title: Text(
+                    _empleado!.nombre,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: _personaListTileSubtitle(_empleado!),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() {
+                      _empleado = null;
+                      _foto = null;
+                    }),
                   ),
                 ),
               ),
-            ],
+            ] else if (!buscando)
+              Text(
+                'Escriba en el buscador para encontrar a la persona',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey.shade700,
+                    ),
+              )
+            else if (filtradas.isEmpty)
+              const Text('Sin coincidencias')
+            else
+              ...filtradas.map(
+                (persona) => Card(
+                  child: ListTile(
+                    title: Text(persona.nombre),
+                    subtitle: _personaListTileSubtitle(persona),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _seleccionarPersona(persona),
+                  ),
+                ),
+              ),
             const SizedBox(height: 20),
             const _SectionTitle('3. Foto'),
             if (_foto != null)

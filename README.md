@@ -4,16 +4,16 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.8.0
+**Version actual:** 1.8.2
 
 ## Funciones
 
 ### Asistencia laboral (pestaña Turno)
 
-- Flujo: empresa → persona → tipo (entrada/salida) → foto → guardar.
+- Flujo kiosco: empresa → **buscar** persona → tipo (entrada/salida) → foto → guardar.
+- No se muestra la lista completa ni marcaciones anteriores; solo resultados de busqueda.
 - Pestañas **Internos** y **Externos** con busqueda por nombre, cargo o documento.
 - Alternancia entrada/salida el mismo dia; si quedo una entrada sin salida de un dia anterior, permite **nueva entrada** al dia siguiente.
-- Campo **cargo** visible en la lista de personas.
 
 ### Internos y turnos
 
@@ -25,13 +25,14 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 ### Capacitaciones (pestaña Capacitacion)
 
 - Cualquier persona activa (internos y externos de todas las empresas) puede asistir.
+- Flujo kiosco: capacitacion → **buscar** persona → foto → registrar (sin listar asistencias previas).
 - Busqueda por nombre, empresa, cargo o documento.
 - Marcacion con foto obligatoria solo el dia programado.
 - Cierre automatico o manual; export PDF/CSV.
 
 ### Personas (internos y externos)
 
-- Campos: empresa, nombre, **cargo**, documento, turnos (internos).
+- Campos: empresa, **NIT** (empresas), nombre, **cargo**, documento, turnos (internos).
 - **Documento unico por empresa** (no permite duplicados).
 - Al editar, los registros historicos conservan empresa, turno, cargo, nombre y documento del momento de la marcacion.
 

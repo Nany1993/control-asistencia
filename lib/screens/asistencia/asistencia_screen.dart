@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 
 import '../../database/db_helper.dart';
 import '../../models/empleado.dart';
@@ -26,7 +25,6 @@ class AsistenciaScreen extends StatefulWidget {
 class _AsistenciaScreenState extends State<AsistenciaScreen> {
   final _picker = ImagePicker();
   final _busqueda = TextEditingController();
-  final _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
   List<Empresa> _empresas = [];
   List<Empleado> _personas = [];
@@ -109,6 +107,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
   }
 
   List<Empleado> get _personasFiltradas {
+    if (_busqueda.text.trim().isEmpty) return [];
     return _personas.where((p) {
       return PersonaSearch.matches(
         nombre: p.nombre,
@@ -117,7 +116,46 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
         cargo: p.cargo,
         query: _busqueda.text,
       );
-    }).toList();
+    }).take(10).toList();
+  }
+
+  void _seleccionarPersona(Empleado persona) {
+    setState(() {
+      _empleado = persona;
+      _busqueda.clear();
+    });
+    _onPersonaSelected(persona);
+  }
+
+  Widget _personaSeleccionadaCard(Empleado persona) {
+    final subtitulo = persona.esExterno
+        ? [
+            persona.documentoLabel,
+            if (persona.cargo.isNotEmpty) persona.cargo,
+          ].join(' · ')
+        : [
+            persona.documentoLabel,
+            if (persona.cargo.isNotEmpty) persona.cargo,
+            if (persona.turnosNombre != null) 'Turnos: ${persona.turnosNombre}',
+          ].join(' · ');
+    return Card(
+      color: Colors.blue.shade50,
+      child: ListTile(
+        title: Text(persona.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitulo),
+        trailing: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => setState(() {
+            _empleado = null;
+            _tipo = null;
+            _ultimoRegistro = null;
+            _turnosAsignados = [];
+            _turno = null;
+            _foto = null;
+          }),
+        ),
+      ),
+    );
   }
 
   Future<void> _onPersonaSelected(Empleado persona) async {
@@ -327,6 +365,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
         ? MarcacionValidator.tipoPermitido(_ultimoRegistro)
         : null;
     final filtradas = _personasFiltradas;
+    final buscando = _busqueda.text.trim().isNotEmpty;
 
     return Scaffold(
       body: _loading
@@ -374,55 +413,48 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                     _SectionTitle(_esExterno ? '3. Externo' : '3. Empleado'),
                     PersonaSearchField(
                       controller: _busqueda,
+                      hintText: 'Escriba nombre, documento o cargo...',
                       onChanged: (_) => setState(() {}),
                     ),
                     const SizedBox(height: 8),
                     if (_empresa == null)
                       const Text('Seleccione una empresa primero')
-                    else if (filtradas.isEmpty)
+                    else if (_empleado != null) ...[
+                      _personaSeleccionadaCard(_empleado!),
+                    ] else if (!buscando)
                       Text(
-                        _personas.isEmpty
-                            ? 'No hay ${_esExterno ? 'externos' : 'empleados'} en esta empresa'
-                            : 'Sin coincidencias',
+                        'Escriba en el buscador para encontrar a la persona',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey.shade700,
+                            ),
                       )
+                    else if (filtradas.isEmpty)
+                      const Text('Sin coincidencias')
                     else
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 220),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: filtradas.length,
-                          itemBuilder: (context, index) {
-                            final persona = filtradas[index];
-                            final selected = _empleado?.id == persona.id;
-                            final subtitulo = persona.esExterno
-                                ? [
-                                    persona.documentoLabel,
-                                    if (persona.cargo.isNotEmpty) persona.cargo,
-                                  ].join(' · ')
-                                : [
-                                    persona.documentoLabel,
-                                    if (persona.cargo.isNotEmpty) persona.cargo,
-                                    if (persona.turnosNombre != null)
-                                      'Turnos: ${persona.turnosNombre}',
-                                  ].join(' · ');
-                            return Card(
-                              color: selected ? Colors.blue.shade50 : null,
-                              child: ListTile(
-                                selected: selected,
-                                title: Text(persona.nombre),
-                                subtitle: Text(subtitulo),
-                                trailing: selected
-                                    ? const Icon(Icons.check_circle, color: Colors.blue)
-                                    : null,
-                                onTap: _empresa == null
-                                    ? null
-                                    : () => _onPersonaSelected(persona),
-                              ),
-                            );
-                          },
-                        ),
+                      ...filtradas.map(
+                        (persona) {
+                          final subtitulo = persona.esExterno
+                              ? [
+                                  persona.documentoLabel,
+                                  if (persona.cargo.isNotEmpty) persona.cargo,
+                                ].join(' · ')
+                              : [
+                                  persona.documentoLabel,
+                                  if (persona.cargo.isNotEmpty) persona.cargo,
+                                  if (persona.turnosNombre != null)
+                                    'Turnos: ${persona.turnosNombre}',
+                                ].join(' · ');
+                          return Card(
+                            child: ListTile(
+                              title: Text(persona.nombre),
+                              subtitle: Text(subtitulo),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => _seleccionarPersona(persona),
+                            ),
+                          );
+                        },
                       ),
-                    if (_turnosAsignados.isNotEmpty && !_esExterno) ...[
+                    if (_turnosAsignados.isNotEmpty && !_esExterno && _empleado != null) ...[
                       const SizedBox(height: 8),
                       Card(
                         color: _turno != null ? Colors.blue.shade50 : Colors.orange.shade50,
@@ -449,15 +481,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                         ),
                       ),
                     ],
-                    if (_ultimoRegistro != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        'Ultima marcacion: ${_ultimoRegistro!.tipo.label} '
-                        'el ${_dateFormat.format(_ultimoRegistro!.fechaHora)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                    if (siguienteTipo != null) ...[
+                    if (siguienteTipo != null && _empleado != null) ...[
                       const SizedBox(height: 4),
                       Text(
                         'Siguiente marcacion permitida: ${siguienteTipo.label}',
