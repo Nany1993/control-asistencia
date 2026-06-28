@@ -16,7 +16,8 @@ void main() {
       );
     });
 
-    test('alterna entrada y salida', () {
+    test('alterna entrada y salida el mismo dia', () {
+      final cuando = DateTime(2026, 1, 1, 12);
       final entrada = Registro(
         empresaId: 1,
         empleadoId: 1,
@@ -26,15 +27,47 @@ void main() {
       );
 
       expect(
-        MarcacionValidator.tipoPermitido(entrada),
+        MarcacionValidator.tipoPermitido(entrada, ahora: cuando),
         TipoMarcacion.salida,
       );
       expect(
-        MarcacionValidator.puedeMarcar(entrada, TipoMarcacion.salida),
+        MarcacionValidator.puedeMarcar(entrada, TipoMarcacion.salida, ahora: cuando),
         isTrue,
       );
       expect(
-        MarcacionValidator.puedeMarcar(entrada, TipoMarcacion.entrada),
+        MarcacionValidator.puedeMarcar(entrada, TipoMarcacion.entrada, ahora: cuando),
+        isFalse,
+      );
+    });
+
+    test('entrada de dia anterior permite nueva entrada hoy', () {
+      final entradaAyer = Registro(
+        empresaId: 1,
+        empleadoId: 1,
+        tipo: TipoMarcacion.entrada,
+        fechaHora: DateTime(2026, 6, 26, 17),
+        fotoPath: 'foto.jpg',
+      );
+      final hoy = DateTime(2026, 6, 27, 8);
+
+      expect(
+        MarcacionValidator.tipoPermitido(entradaAyer, ahora: hoy),
+        TipoMarcacion.entrada,
+      );
+      expect(
+        MarcacionValidator.puedeMarcar(
+          entradaAyer,
+          TipoMarcacion.entrada,
+          ahora: hoy,
+        ),
+        isTrue,
+      );
+      expect(
+        MarcacionValidator.puedeMarcar(
+          entradaAyer,
+          TipoMarcacion.salida,
+          ahora: hoy,
+        ),
         isFalse,
       );
     });

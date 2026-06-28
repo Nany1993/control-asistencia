@@ -1,6 +1,7 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'duplicate_document_exception.dart';
 import 'referential_integrity_exception.dart';
 import '../models/asistencia_capacitacion.dart';
 import '../models/capacitacion.dart';
@@ -39,7 +40,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -134,6 +135,52 @@ class DbHelper {
             WHERE empleado_cargo = ''
           ''');
         }
+        if (oldVersion < 11) {
+          await db.execute(
+            "ALTER TABLE registros ADD COLUMN empleado_nombre TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            "ALTER TABLE registros ADD COLUMN empleado_tipo_documento TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            "ALTER TABLE registros ADD COLUMN empleado_numero_documento TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            "ALTER TABLE asistencia_capacitacion ADD COLUMN empleado_nombre TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            "ALTER TABLE asistencia_capacitacion ADD COLUMN empleado_tipo_documento TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            "ALTER TABLE asistencia_capacitacion ADD COLUMN empleado_numero_documento TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute('''
+            UPDATE registros
+            SET empleado_nombre = (
+              SELECT nombre FROM empleados WHERE empleados.id = registros.empleado_id
+            ),
+            empleado_tipo_documento = (
+              SELECT tipo_documento FROM empleados WHERE empleados.id = registros.empleado_id
+            ),
+            empleado_numero_documento = (
+              SELECT numero_documento FROM empleados WHERE empleados.id = registros.empleado_id
+            )
+            WHERE empleado_nombre = ''
+          ''');
+          await db.execute('''
+            UPDATE asistencia_capacitacion
+            SET empleado_nombre = (
+              SELECT nombre FROM empleados WHERE empleados.id = asistencia_capacitacion.empleado_id
+            ),
+            empleado_tipo_documento = (
+              SELECT tipo_documento FROM empleados WHERE empleados.id = asistencia_capacitacion.empleado_id
+            ),
+            empleado_numero_documento = (
+              SELECT numero_documento FROM empleados WHERE empleados.id = asistencia_capacitacion.empleado_id
+            )
+            WHERE empleado_nombre = ''
+          ''');
+        }
       },
     );
   }
@@ -188,6 +235,9 @@ class DbHelper {
         radicado TEXT,
         turno_id INTEGER,
         empleado_cargo TEXT NOT NULL DEFAULT '',
+        empleado_nombre TEXT NOT NULL DEFAULT '',
+        empleado_tipo_documento TEXT NOT NULL DEFAULT '',
+        empleado_numero_documento TEXT NOT NULL DEFAULT '',
         FOREIGN KEY (empresa_id) REFERENCES empresas(id),
         FOREIGN KEY (empleado_id) REFERENCES empleados(id),
         FOREIGN KEY (turno_id) REFERENCES turnos(id)
@@ -270,6 +320,9 @@ class DbHelper {
         fecha_hora TEXT NOT NULL,
         foto_path TEXT NOT NULL,
         empleado_cargo TEXT NOT NULL DEFAULT '',
+        empleado_nombre TEXT NOT NULL DEFAULT '',
+        empleado_tipo_documento TEXT NOT NULL DEFAULT '',
+        empleado_numero_documento TEXT NOT NULL DEFAULT '',
         FOREIGN KEY (capacitacion_id) REFERENCES capacitaciones(id),
         FOREIGN KEY (empleado_id) REFERENCES empleados(id),
         UNIQUE(capacitacion_id, empleado_id)
@@ -279,9 +332,9 @@ class DbHelper {
 
   static const _registroSelect = '''
       SELECT r.*,
-             e.nombre AS empleado_nombre,
-             e.tipo_documento AS empleado_tipo_documento,
-             e.numero_documento AS empleado_numero_documento,
+             COALESCE(NULLIF(r.empleado_nombre, ''), e.nombre) AS empleado_nombre,
+             COALESCE(NULLIF(r.empleado_tipo_documento, ''), e.tipo_documento) AS empleado_tipo_documento,
+             COALESCE(NULLIF(r.empleado_numero_documento, ''), e.numero_documento) AS empleado_numero_documento,
              e.es_externo AS empleado_es_externo,
              COALESCE(NULLIF(r.empleado_cargo, ''), e.cargo) AS empleado_cargo,
              emp.nombre AS empresa_nombre,
@@ -551,7 +604,48 @@ class DbHelper {
     return Empleado.fromMap(rows.first);
   }
 
+  Future<bool> existeEmpleadoConDocumento({
+    required int empresaId,
+    required String tipoDocumento,
+    required String numeroDocumento,
+    int? excludeEmpleadoId,
+  }) async {
+    final db = await database;
+    final filters = <String>[
+      'empresa_id = ?',
+      'tipo_documento = ?',
+      'numero_documento = ?',
+    ];
+    final args = <Object>[empresaId, tipoDocumento, numeroDocumento];
+    if (excludeEmpleadoId != null) {
+      filters.add('id != ?');
+      args.add(excludeEmpleadoId);
+    }
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM empleados WHERE ${filters.join(' AND ')}',
+      args,
+    );
+    return (Sqflite.firstIntValue(result) ?? 0) > 0;
+  }
+
+  Future<void> _validarDocumentoUnico(Empleado empleado) async {
+    if (empleado.numeroDocumento.trim().isEmpty) return;
+    final duplicado = await existeEmpleadoConDocumento(
+      empresaId: empleado.empresaId,
+      tipoDocumento: empleado.tipoDocumento,
+      numeroDocumento: empleado.numeroDocumento.trim(),
+      excludeEmpleadoId: empleado.id,
+    );
+    if (duplicado) {
+      throw DuplicateDocumentException(
+        'Ya existe una persona con ${empleado.tipoDocumento} '
+        '${empleado.numeroDocumento} en esta empresa.',
+      );
+    }
+  }
+
   Future<int> insertEmpleado(Empleado empleado, {List<int>? turnoIds}) async {
+    await _validarDocumentoUnico(empleado);
     final db = await database;
     final id = await db.insert('empleados', empleado.toMap()..remove('id'));
     if (turnoIds != null && turnoIds.isNotEmpty) {
@@ -561,6 +655,7 @@ class DbHelper {
   }
 
   Future<void> updateEmpleado(Empleado empleado, {List<int>? turnoIds}) async {
+    await _validarDocumentoUnico(empleado);
     final db = await database;
     await db.update(
       'empleados',
@@ -726,9 +821,9 @@ class DbHelper {
 
   static const _asistenciaCapSelect = '''
       SELECT ac.*,
-             e.nombre AS empleado_nombre,
-             e.tipo_documento AS empleado_tipo_documento,
-             e.numero_documento AS empleado_numero_documento,
+             COALESCE(NULLIF(ac.empleado_nombre, ''), e.nombre) AS empleado_nombre,
+             COALESCE(NULLIF(ac.empleado_tipo_documento, ''), e.tipo_documento) AS empleado_tipo_documento,
+             COALESCE(NULLIF(ac.empleado_numero_documento, ''), e.numero_documento) AS empleado_numero_documento,
              e.es_externo AS empleado_es_externo,
              COALESCE(NULLIF(ac.empleado_cargo, ''), e.cargo) AS empleado_cargo,
              emp.nombre AS empresa_nombre,

@@ -86,7 +86,7 @@ class AdminHomeScreen extends StatelessWidget {
           _AdminTile(
             icon: Icons.file_download,
             title: 'Exportar',
-            subtitle: 'Generar CSV y compartir reporte',
+            subtitle: 'Generar CSV/PDF y compartir reportes',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ExportScreen()),
             ),
@@ -94,7 +94,7 @@ class AdminHomeScreen extends StatelessWidget {
           _AdminTile(
             icon: Icons.backup,
             title: 'Respaldo de datos',
-            subtitle: 'Descargar copia de base de datos y fotos',
+            subtitle: 'Generar o restaurar copia de seguridad',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const BackupScreen()),
             ),

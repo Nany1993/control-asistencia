@@ -78,6 +78,9 @@ class Registro {
       'radicado': radicado,
       'turno_id': turnoId,
       'empleado_cargo': empleadoCargo ?? '',
+      'empleado_nombre': empleadoNombre ?? '',
+      'empleado_tipo_documento': empleadoTipoDocumento ?? '',
+      'empleado_numero_documento': empleadoNumeroDocumento ?? '',
     };
   }
 

@@ -70,6 +70,7 @@ class _RegistrosScreenState extends State<RegistrosScreen> {
         nombre: e.nombre,
         tipoDocumento: e.tipoDocumento,
         numeroDocumento: e.numeroDocumento,
+        cargo: e.cargo,
         query: _busquedaEmpleado.text,
       );
     }).toList();

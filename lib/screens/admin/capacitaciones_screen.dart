@@ -98,6 +98,15 @@ class _CapacitacionesScreenState extends State<CapacitacionesScreen> {
   }
 
   Future<void> _openForm([Capacitacion? cap]) async {
+    if (cap != null && !cap.activa) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se puede editar una capacitacion cerrada.'),
+        ),
+      );
+      return;
+    }
+
     final saved = await showDialog<bool>(
       context: context,
       builder: (_) => _CapacitacionFormDialog(capacitacion: cap),
@@ -161,7 +170,8 @@ class _CapacitacionesScreenState extends State<CapacitacionesScreen> {
                             if (v == 'delete') await _delete(cap);
                           },
                           itemBuilder: (_) => [
-                            const PopupMenuItem(value: 'edit', child: Text('Editar')),
+                            if (cap.activa)
+                              const PopupMenuItem(value: 'edit', child: Text('Editar')),
                             if (cap.activa)
                               const PopupMenuItem(value: 'close', child: Text('Cerrar')),
                             const PopupMenuItem(value: 'delete', child: Text('Eliminar')),

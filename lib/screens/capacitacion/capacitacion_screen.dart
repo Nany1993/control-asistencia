@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import 'package:sqflite/sqflite.dart';
+
 import '../../database/db_helper.dart';
 import '../../models/capacitacion.dart';
 import '../../models/empleado.dart';
@@ -104,6 +106,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
         tipoDocumento: p.tipoDocumento,
         numeroDocumento: p.numeroDocumento,
         cargo: p.cargo,
+        empresaNombre: p.empresaNombre ?? '',
         query: _busqueda.text,
       );
     }).toList();
@@ -177,6 +180,9 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
           fechaHora: DateTime.now(),
           fotoPath: fotoPath,
           empleadoCargo: _empleado!.cargo,
+          empleadoNombre: _empleado!.nombre,
+          empleadoTipoDocumento: _empleado!.tipoDocumento,
+          empleadoNumeroDocumento: _empleado!.numeroDocumento,
         ),
       );
 
@@ -194,6 +200,27 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
           _foto = null;
           _busqueda.clear();
         });
+      }
+    } on DatabaseException catch (e) {
+      if (mounted) {
+        if (e.isUniqueConstraintError()) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${_empleado!.nombre} ya registro asistencia'),
+            ),
+          );
+          setState(() {
+            if (_empleado?.id != null) {
+              _asistieronIds.add(_empleado!.id!);
+            }
+            _empleado = null;
+            _foto = null;
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al guardar: $e')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -302,7 +329,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
             const _SectionTitle('2. Persona'),
             PersonaSearchField(
               controller: _busqueda,
-              hintText: 'Buscar por nombre, cargo o documento...',
+              hintText: 'Buscar por nombre, empresa, cargo o documento...',
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 8),

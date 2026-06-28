@@ -250,6 +250,9 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
           radicado: radicado,
           turnoId: _turno?.id,
           empleadoCargo: _empleado!.cargo,
+          empleadoNombre: _empleado!.nombre,
+          empleadoTipoDocumento: _empleado!.tipoDocumento,
+          empleadoNumeroDocumento: _empleado!.numeroDocumento,
         ),
       );
 
@@ -392,9 +395,13 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                             final persona = filtradas[index];
                             final selected = _empleado?.id == persona.id;
                             final subtitulo = persona.esExterno
-                                ? persona.documentoLabel
+                                ? [
+                                    persona.documentoLabel,
+                                    if (persona.cargo.isNotEmpty) persona.cargo,
+                                  ].join(' · ')
                                 : [
                                     persona.documentoLabel,
+                                    if (persona.cargo.isNotEmpty) persona.cargo,
                                     if (persona.turnosNombre != null)
                                       'Turnos: ${persona.turnosNombre}',
                                   ].join(' · ');

@@ -137,20 +137,29 @@ class _ExportScreenState extends State<ExportScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Future<void> _exportAsistencia({bool share = false}) async {
+  Future<void> _exportAsistencia({bool pdf = false, bool share = false}) async {
     setState(() {
       _exporting = true;
       _lastFile = null;
     });
 
     try {
-      final file = await ExportService.instance.exportCsv(
-        empresaId: _empresaId,
-        desde: _desde,
-        hasta: _hasta,
-      );
+      final file = pdf
+          ? await ExportService.instance.exportPdf(
+              empresaId: _empresaId,
+              desde: _desde,
+              hasta: _hasta,
+            )
+          : await ExportService.instance.exportCsv(
+              empresaId: _empresaId,
+              desde: _desde,
+              hasta: _hasta,
+            );
       if (share) {
-        await ExportService.instance.shareFile(file);
+        await ExportService.instance.shareFile(
+          file,
+          text: pdf ? 'Reporte PDF de asistencia' : 'Reporte CSV de asistencia',
+        );
       }
       if (mounted) {
         setState(() => _lastFile = file.path);
@@ -273,6 +282,18 @@ class _ExportScreenState extends State<ExportScreen> {
                   onPressed: _exporting ? null : () => _exportAsistencia(share: true),
                   icon: const Icon(Icons.share),
                   label: const Text('Generar y compartir CSV'),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _exporting ? null : () => _exportAsistencia(pdf: true),
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text('Generar PDF'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _exporting ? null : () => _exportAsistencia(pdf: true, share: true),
+                  icon: const Icon(Icons.ios_share),
+                  label: const Text('Generar y compartir PDF'),
                 ),
               ],
             ),

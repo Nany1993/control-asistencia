@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../database/backup_restore_exception.dart';
 import '../../services/backup_service.dart';
 
 class BackupScreen extends StatefulWidget {
@@ -47,6 +51,68 @@ class _BackupScreenState extends State<BackupScreen> {
     }
   }
 
+  Future<void> _restoreBackup() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restaurar respaldo'),
+        content: const Text(
+          'Esta accion reemplazara todos los datos actuales de la app '
+          '(base de datos, fotos y reportes) por los del archivo ZIP seleccionado.\n\n'
+          '¿Desea continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Restaurar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['zip'],
+    );
+    if (result == null || result.files.single.path == null) return;
+
+    setState(() => _working = true);
+    try {
+      await BackupService.instance.restoreBackup(
+        File(result.files.single.path!),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Respaldo restaurado. Los datos ya estan disponibles en la app.',
+            ),
+          ),
+        );
+      }
+    } on BackupRestoreException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al restaurar: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,7 +143,7 @@ class _BackupScreenState extends State<BackupScreen> {
           const SizedBox(height: 16),
           const Text(
             'Guarde el archivo .zip en Drive, correo o una PC. '
-            'Asi no pierde la informacion si cambia de dispositivo o desinstala la app.',
+            'Luego puede restaurarlo en este u otro dispositivo con la app instalada.',
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
@@ -96,6 +162,24 @@ class _BackupScreenState extends State<BackupScreen> {
             onPressed: _working ? null : () => _createBackup(share: true),
             icon: const Icon(Icons.share),
             label: const Text('Generar y compartir respaldo'),
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 12),
+          Text(
+            'Restaurar desde archivo',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Seleccione un .zip generado previamente por esta app. '
+            'Reemplazara los datos actuales del telefono.',
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _working ? null : _restoreBackup,
+            icon: const Icon(Icons.restore),
+            label: const Text('Seleccionar ZIP y restaurar'),
           ),
           if (_lastBackupPath != null) ...[
             const SizedBox(height: 24),

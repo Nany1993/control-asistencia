@@ -23,13 +23,15 @@ class PersonaSearch {
     required String numeroDocumento,
     required String query,
     String cargo = '',
+    String empresaNombre = '',
   }) {
     final q = normalize(query);
     if (q.isEmpty) return true;
 
     final tokens = q.split(' ').where((t) => t.isNotEmpty);
     final haystack = normalize(
-      '$nombre $tipoDocumento $numeroDocumento $cargo $tipoDocumento$numeroDocumento',
+      '$nombre $tipoDocumento $numeroDocumento $cargo $empresaNombre '
+      '$tipoDocumento$numeroDocumento',
     );
 
     for (final token in tokens) {

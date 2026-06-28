@@ -41,6 +41,9 @@ class AsistenciaCapacitacion {
       'fecha_hora': fechaHora.toIso8601String(),
       'foto_path': fotoPath,
       'empleado_cargo': empleadoCargo ?? '',
+      'empleado_nombre': empleadoNombre ?? '',
+      'empleado_tipo_documento': empleadoTipoDocumento ?? '',
+      'empleado_numero_documento': empleadoNumeroDocumento ?? '',
     };
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../database/db_helper.dart';
+import '../../database/duplicate_document_exception.dart';
 import '../../database/referential_integrity_exception.dart';
 import '../../models/empleado.dart';
 import '../../models/empresa.dart';
@@ -313,34 +314,38 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
 
     final turnoIds = _turnoIds.toList();
 
-    if (widget.persona == null) {
-      await DbHelper.instance.insertEmpleado(
-        Empleado(
-          empresaId: _empresaId,
-          nombre: nombre,
-          tipoDocumento: _tipoDocumento,
-          numeroDocumento: numero,
-          cargo: cargo,
-          esExterno: widget.esExterno,
-          activo: _activo,
-          createdAt: DateTime.now(),
-        ),
-        turnoIds: widget.esExterno ? null : turnoIds,
-      );
-    } else {
-      await DbHelper.instance.updateEmpleado(
-        widget.persona!.copyWith(
-          empresaId: _empresaId,
-          nombre: nombre,
-          tipoDocumento: _tipoDocumento,
-          numeroDocumento: numero,
-          cargo: cargo,
-          activo: _activo,
-        ),
-        turnoIds: widget.esExterno ? [] : turnoIds,
-      );
+    try {
+      if (widget.persona == null) {
+        await DbHelper.instance.insertEmpleado(
+          Empleado(
+            empresaId: _empresaId,
+            nombre: nombre,
+            tipoDocumento: _tipoDocumento,
+            numeroDocumento: numero,
+            cargo: cargo,
+            esExterno: widget.esExterno,
+            activo: _activo,
+            createdAt: DateTime.now(),
+          ),
+          turnoIds: widget.esExterno ? null : turnoIds,
+        );
+      } else {
+        await DbHelper.instance.updateEmpleado(
+          widget.persona!.copyWith(
+            empresaId: _empresaId,
+            nombre: nombre,
+            tipoDocumento: _tipoDocumento,
+            numeroDocumento: numero,
+            cargo: cargo,
+            activo: _activo,
+          ),
+          turnoIds: widget.esExterno ? [] : turnoIds,
+        );
+      }
+      if (mounted) Navigator.pop(context, true);
+    } on DuplicateDocumentException catch (e) {
+      if (mounted) setState(() => _error = e.message);
     }
-    if (mounted) Navigator.pop(context, true);
   }
 
   @override
@@ -375,7 +380,7 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
             if (widget.persona != null) ...[
               const SizedBox(height: 8),
               Text(
-                'Los registros anteriores conservan la empresa, turno y cargo con que fueron marcados.',
+                'Los registros anteriores conservan la empresa, turno, cargo, nombre y documento con que fueron marcados.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
