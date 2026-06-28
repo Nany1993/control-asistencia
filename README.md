@@ -53,12 +53,51 @@ Menu: Empresas → Turnos → Empleados → Externos → Capacitaciones → Asis
 - **Respaldo:** generar ZIP o **restaurar** desde un ZIP previo (valida version compatible).
 - Capacitaciones cerradas **no se pueden editar** (solo cerrar o eliminar si no tienen asistencias)
 
-## Generar APK
+## Generar APK para uso
+
+El APK no se sube a GitHub; hay que generarlo en el PC y copiarlo al tablet o celular.
+
+### Requisitos en el PC (Windows)
+
+- **Flutter** instalado (el script usa `C:\flutter` o lo copia desde tu perfil la primera vez).
+- **Android SDK** (Android Studio o solo el SDK). El script usa `%LOCALAPPDATA%\Android\Sdk`.
+- Verificar entorno: `flutter doctor` (debe marcar Android toolchain sin errores graves).
+
+### Compilar
+
+Desde la carpeta del proyecto, en **PowerShell**:
 
 ```powershell
 cd "c:\Users\ACER NITRO\Downloads\Control asistencia"
 powershell -ExecutionPolicy Bypass -File .\build-apk.ps1
 ```
+
+El script `build-apk.ps1`:
+
+1. Sincroniza el codigo a `C:\control_asistencia` (evita problemas por espacios en la ruta del usuario).
+2. Ejecuta `flutter pub get` y `flutter build apk --release`.
+3. Copia el APK final a la carpeta del proyecto como **`Control-Asistencia.apk`**.
+
+La primera compilacion puede tardar varios minutos.
+
+### Instalar en el tablet
+
+1. Copia **`Control-Asistencia.apk`** al dispositivo (USB, correo, Drive, etc.).
+2. En Android: permitir **instalar apps de origenes desconocidos** para el navegador o gestor de archivos que uses.
+3. Abre el APK en el tablet y confirma **Instalar**.
+4. Si ya tenias una version anterior, la instalacion **actualiza** la app; los datos locales se conservan salvo que desinstales antes.
+
+### Alternativa manual (sin script)
+
+Si ya tienes Flutter en una ruta sin espacios:
+
+```powershell
+cd ruta\al\proyecto
+flutter pub get
+flutter build apk --release
+```
+
+El APK queda en `build\app\outputs\flutter-apk\app-release.apk`.
 
 ## Exportar reportes
 
