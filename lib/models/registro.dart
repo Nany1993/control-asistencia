@@ -34,6 +34,7 @@ class Registro {
     this.empleadoEsExterno,
     this.empleadoCargo,
     this.turnoNombre,
+    this.notaAdmin,
   });
 
   final int? id;
@@ -53,9 +54,13 @@ class Registro {
   final bool? empleadoEsExterno;
   final String? empleadoCargo;
   final String? turnoNombre;
+  final String? notaAdmin;
 
   String get tipoPersonaLabel =>
       (empleadoEsExterno ?? false) ? 'EXTERNO' : 'INTERNO';
+
+  bool get tieneNotaAdmin =>
+      notaAdmin != null && notaAdmin!.trim().isNotEmpty;
 
   String? get motivoSalidaLabel {
     if (motivoSalida == null) return null;
@@ -83,6 +88,7 @@ class Registro {
       'empleado_nombre': TextoDisplay.mayus(empleadoNombre ?? ''),
       'empleado_tipo_documento': TextoDisplay.mayus(empleadoTipoDocumento ?? ''),
       'empleado_numero_documento': TextoDisplay.mayus(empleadoNumeroDocumento ?? ''),
+      'nota_admin': TextoDisplay.mayus(notaAdmin ?? ''),
     };
   }
 
@@ -107,6 +113,7 @@ class Registro {
       empleadoEsExterno: (map['empleado_es_externo'] as int?) == 1,
       empleadoCargo: TextoDisplay.mayusOpcional(map['empleado_cargo'] as String?),
       turnoNombre: TextoDisplay.mayusOpcional(map['turno_nombre'] as String?),
+      notaAdmin: TextoDisplay.mayusOpcional(map['nota_admin'] as String?),
     );
   }
 }

@@ -50,7 +50,7 @@ class ExportService {
     buffer.write('\uFEFF');
     buffer.writeln(
       'EMPRESA,TIPO PERSONA,EMPLEADO,CARGO,TURNO,TIPO DOCUMENTO,NUMERO DOCUMENTO,'
-      'FECHA,HORA,TIPO MARCACION,MOTIVO SALIDA,RADICADO,OBSERVACION,RUTA FOTO',
+      'FECHA,HORA,TIPO MARCACION,MOTIVO SALIDA,RADICADO,OBSERVACION,NOTA_ADMIN,RUTA FOTO',
     );
 
     for (final registro in registros) {
@@ -127,6 +127,7 @@ class ExportService {
                 'HORA',
                 'MARCACION',
                 'OBSERVACION',
+                'NOTA ADMIN',
               ],
               data: [
                 for (final r in registros)
@@ -151,6 +152,7 @@ class ExportService {
                           r.observacion!,
                       ].join(' · '),
                     ),
+                    _cell(r.notaAdmin ?? ''),
                   ],
               ],
               headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
@@ -188,6 +190,7 @@ class ExportService {
       _escape(_cell(registro.motivoSalidaLabel ?? '')),
       _escape(_cell(registro.radicado ?? '')),
       _escape(_cell(registro.observacion ?? '')),
+      _escape(_cell(registro.notaAdmin ?? '')),
       _escape(registro.fotoPath),
     ];
     return cells.join(',');

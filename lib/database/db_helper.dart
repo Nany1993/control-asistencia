@@ -10,6 +10,7 @@ import '../models/empleado.dart';
 import '../models/empresa.dart';
 import '../models/registro.dart';
 import '../models/turno.dart';
+import '../utils/texto_display.dart';
 
 class DbHelper {
   DbHelper._();
@@ -41,7 +42,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 15,
+      version: 16,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -214,6 +215,11 @@ class DbHelper {
             WHERE hora_salida <= hora_entrada
           ''');
         }
+        if (oldVersion < 16) {
+          await db.execute(
+            "ALTER TABLE registros ADD COLUMN nota_admin TEXT NOT NULL DEFAULT ''",
+          );
+        }
       },
     );
   }
@@ -274,6 +280,7 @@ class DbHelper {
         empleado_nombre TEXT NOT NULL DEFAULT '',
         empleado_tipo_documento TEXT NOT NULL DEFAULT '',
         empleado_numero_documento TEXT NOT NULL DEFAULT '',
+        nota_admin TEXT NOT NULL DEFAULT '',
         FOREIGN KEY (empresa_id) REFERENCES empresas(id),
         FOREIGN KEY (empleado_id) REFERENCES empleados(id),
         FOREIGN KEY (turno_id) REFERENCES turnos(id)
@@ -828,6 +835,16 @@ class DbHelper {
   Future<int> insertRegistro(Registro registro) async {
     final db = await database;
     return db.insert('registros', registro.toMap()..remove('id'));
+  }
+
+  Future<void> updateNotaAdminRegistro(int id, String? notaAdmin) async {
+    final db = await database;
+    await db.update(
+      'registros',
+      {'nota_admin': TextoDisplay.mayus(notaAdmin ?? '')},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<Registro?> getUltimoRegistroEmpleado(int empleadoId) async {

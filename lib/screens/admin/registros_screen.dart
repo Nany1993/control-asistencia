@@ -159,6 +159,74 @@ class _RegistrosScreenState extends State<RegistrosScreen> {
     );
   }
 
+  Future<void> _editarNotaAdmin(Registro registro) async {
+    if (registro.id == null) return;
+    final controller = TextEditingController(text: registro.notaAdmin ?? '');
+
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nota admin'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${registro.empleadoNombre ?? ''} · ${registro.tipo.label} · '
+                '${_dateFormat.format(registro.fechaHora)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Nota del administrador',
+                  hintText: 'Ej: turno correcto era vigilancia nocturna',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          if (registro.tieneNotaAdmin)
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ''),
+              child: const Text('Quitar nota'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (result == null || !mounted) return;
+
+    await DbHelper.instance.updateNotaAdminRegistro(
+      registro.id!,
+      result.isEmpty ? null : result,
+    );
+    await _load();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.isEmpty ? 'Nota admin eliminada' : 'Nota admin guardada'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final empleadosFiltrados = _empleadosFiltrados;
@@ -246,12 +314,16 @@ class _RegistrosScreenState extends State<RegistrosScreen> {
                                   ? Colors.green.shade100
                                   : Colors.orange.shade100,
                               child: Icon(
-                                r.tipo.value == 'entrada'
-                                    ? Icons.login
-                                    : Icons.logout,
-                                color: r.tipo.value == 'entrada'
-                                    ? Colors.green.shade800
-                                    : Colors.orange.shade800,
+                                r.tieneNotaAdmin
+                                    ? Icons.sticky_note_2
+                                    : r.tipo.value == 'entrada'
+                                        ? Icons.login
+                                        : Icons.logout,
+                                color: r.tieneNotaAdmin
+                                    ? Colors.blue.shade800
+                                    : r.tipo.value == 'entrada'
+                                        ? Colors.green.shade800
+                                        : Colors.orange.shade800,
                               ),
                             ),
                             title: Text('${r.tipoPersonaLabel}: ${r.empleadoNombre ?? 'Persona'}'),
@@ -270,9 +342,27 @@ class _RegistrosScreenState extends State<RegistrosScreen> {
                                   'Rad: ${r.radicado}',
                                 if (r.observacion != null && r.observacion!.isNotEmpty)
                                   r.observacion!,
+                                if (r.tieneNotaAdmin) 'Nota admin: ${r.notaAdmin}',
                               ].where((s) => s.isNotEmpty).join(' · '),
                             ),
-                            trailing: const Icon(Icons.photo_camera),
+                            trailing: PopupMenuButton<String>(
+                              onSelected: (v) {
+                                if (v == 'foto') _verFoto(r);
+                                if (v == 'nota') _editarNotaAdmin(r);
+                              },
+                              itemBuilder: (_) => [
+                                const PopupMenuItem(
+                                  value: 'foto',
+                                  child: Text('Ver foto'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'nota',
+                                  child: Text(
+                                    r.tieneNotaAdmin ? 'Editar nota admin' : 'Agregar nota admin',
+                                  ),
+                                ),
+                              ],
+                            ),
                             onTap: () => _verFoto(r),
                           );
                         },

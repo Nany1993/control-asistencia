@@ -4,7 +4,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.8.8
+**Version actual:** 1.8.9
 
 ## Funciones
 
@@ -52,6 +52,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 Menu: Empresas → Turnos → Empleados → Externos → Capacitaciones → Asistencia capacitaciones → Registros → Exportar → Respaldo → Modificar PIN.
 
 - Exportar asistencia laboral en **CSV o PDF**.
+- **Registros:** consultar marcaciones y agregar **nota admin** por registro (aclaraciones del administrador; aparece en exportes).
 - **Respaldo:** generar ZIP o **restaurar** desde un ZIP previo (valida version compatible).
 - Capacitaciones cerradas **no se pueden editar** (solo cerrar o eliminar si no tienen asistencias)
 
