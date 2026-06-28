@@ -157,7 +157,7 @@ class _PersonasAdminScreenState extends State<PersonasAdminScreen> {
                   .map(
                     (e) => DropdownMenuItem(
                       value: e.id,
-                      child: Text(e.nombre),
+                      child: Text(e.displayLabel),
                     ),
                   )
                   .toList(),
@@ -369,7 +369,7 @@ class _PersonaFormDialogState extends State<_PersonaFormDialog> {
                   .map(
                     (e) => DropdownMenuItem(
                       value: e.id,
-                      child: Text(e.nombre),
+                      child: Text(e.displayLabel),
                     ),
                   )
                   .toList(),

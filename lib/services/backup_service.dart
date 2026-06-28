@@ -14,7 +14,7 @@ class BackupService {
   BackupService._();
   static final BackupService instance = BackupService._();
 
-  static const _dbVersion = 11;
+  static const _dbVersion = 12;
   final _fileStamp = DateFormat('yyyyMMdd_HHmmss');
 
   Future<File> createBackup() async {

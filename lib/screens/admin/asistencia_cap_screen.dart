@@ -116,13 +116,14 @@ class _AsistenciaCapScreenState extends State<AsistenciaCapScreen> {
                               backgroundColor: Colors.blue.shade100,
                               child: Icon(Icons.person, color: Colors.blue.shade800),
                             ),
-                            title: Text(a.empleadoNombre ?? 'Persona'),
+                            title: Text(
+                              a.empleadoCargo != null && a.empleadoCargo!.isNotEmpty
+                                  ? '${a.empleadoNombre ?? 'Persona'} · ${a.empleadoCargo}'
+                                  : (a.empleadoNombre ?? 'Persona'),
+                            ),
                             subtitle: Text(
                               [
                                 a.capacitacionNombre ?? '',
-                                if (a.empleadoCargo != null &&
-                                    a.empleadoCargo!.isNotEmpty)
-                                  a.empleadoCargo!,
                                 a.documentoLabel,
                                 a.tipoPersonaLabel,
                                 a.empresaNombre ?? '',

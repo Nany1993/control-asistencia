@@ -353,7 +353,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                       ),
                       items: _empresas
                           .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e.nombre)),
+                            (e) => DropdownMenuItem(value: e, child: Text(e.displayLabel)),
                           )
                           .toList(),
                       onChanged: _onEmpresaSelected,

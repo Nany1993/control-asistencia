@@ -172,7 +172,7 @@ class _RegistrosScreenState extends State<RegistrosScreen> {
               items: [
                 const DropdownMenuItem<int?>(value: null, child: Text('Todas')),
                 ..._empresas.map(
-                  (e) => DropdownMenuItem(value: e.id, child: Text(e.nombre)),
+                  (e) => DropdownMenuItem(value: e.id, child: Text(e.displayLabel)),
                 ),
               ],
               onChanged: _onEmpresaChanged,

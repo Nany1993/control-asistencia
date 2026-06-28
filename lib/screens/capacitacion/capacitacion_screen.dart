@@ -117,10 +117,26 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
       persona.tipoPersonaLabel,
       if (persona.empresaNombre != null && persona.empresaNombre!.isNotEmpty)
         persona.empresaNombre!,
-      if (persona.cargo.isNotEmpty) persona.cargo,
       persona.documentoLabel,
     ];
     return partes.join(' · ');
+  }
+
+  Widget _personaListTileSubtitle(Empleado persona) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (persona.cargo.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Text(
+              'Cargo: ${persona.cargo}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        Text(_personaSubtitle(persona)),
+      ],
+    );
   }
 
   Future<void> _tomarFoto() async {
@@ -190,7 +206,9 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Asistencia registrada para ${_empleado!.nombre}',
+              _empleado!.cargo.isNotEmpty
+                  ? 'Asistencia registrada para ${_empleado!.nombre} (${_empleado!.cargo})'
+                  : 'Asistencia registrada para ${_empleado!.nombre}',
             ),
           ),
         );
@@ -360,7 +378,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
                       child: ListTile(
                         selected: selected,
                         title: Text(persona.nombre),
-                        subtitle: Text(_personaSubtitle(persona)),
+                        subtitle: _personaListTileSubtitle(persona),
                         trailing: yaAsistio
                             ? const Chip(
                                 label: Text('Ya asistio'),
@@ -380,6 +398,30 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
                   },
                 ),
               ),
+            if (_empleado != null) ...[
+              const SizedBox(height: 12),
+              Card(
+                color: Colors.blue.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _empleado!.nombre,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      if (_empleado!.cargo.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text('Cargo: ${_empleado!.cargo}'),
+                      ],
+                      const SizedBox(height: 4),
+                      Text(_personaSubtitle(_empleado!)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             const _SectionTitle('3. Foto'),
             if (_foto != null)

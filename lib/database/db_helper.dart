@@ -2,6 +2,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 import 'duplicate_document_exception.dart';
+import 'duplicate_nit_exception.dart';
 import 'referential_integrity_exception.dart';
 import '../models/asistencia_capacitacion.dart';
 import '../models/capacitacion.dart';
@@ -40,7 +41,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -181,6 +182,11 @@ class DbHelper {
             WHERE empleado_nombre = ''
           ''');
         }
+        if (oldVersion < 12) {
+          await db.execute(
+            "ALTER TABLE empresas ADD COLUMN nit TEXT NOT NULL DEFAULT ''",
+          );
+        }
       },
     );
   }
@@ -190,6 +196,7 @@ class DbHelper {
       CREATE TABLE empresas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL,
+        nit TEXT NOT NULL DEFAULT '',
         activa INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL
       )
@@ -394,12 +401,45 @@ class DbHelper {
     return Empresa.fromMap(rows.first);
   }
 
+  Future<bool> existeEmpresaConNit(String nit, {int? excludeEmpresaId}) async {
+    final normalized = nit.trim();
+    if (normalized.isEmpty) return false;
+
+    final db = await database;
+    final filters = <String>['nit = ?'];
+    final args = <Object>[normalized];
+    if (excludeEmpresaId != null) {
+      filters.add('id != ?');
+      args.add(excludeEmpresaId);
+    }
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM empresas WHERE ${filters.join(' AND ')}',
+      args,
+    );
+    return (Sqflite.firstIntValue(result) ?? 0) > 0;
+  }
+
+  Future<void> _validarNitUnico(Empresa empresa) async {
+    final nit = empresa.nit.trim();
+    if (nit.isEmpty) return;
+
+    final duplicado = await existeEmpresaConNit(
+      nit,
+      excludeEmpresaId: empresa.id,
+    );
+    if (duplicado) {
+      throw DuplicateNitException('Ya existe una empresa con el NIT $nit.');
+    }
+  }
+
   Future<int> insertEmpresa(Empresa empresa) async {
+    await _validarNitUnico(empresa);
     final db = await database;
     return db.insert('empresas', empresa.toMap()..remove('id'));
   }
 
   Future<void> updateEmpresa(Empresa empresa) async {
+    await _validarNitUnico(empresa);
     final db = await database;
     await db.update(
       'empresas',
