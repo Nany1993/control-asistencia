@@ -4,13 +4,14 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.8.5
+**Version actual:** 1.8.6
 
 ## Funciones
 
 ### Presentacion
 
-- Toda la **informacion visible** (pantallas y exportes CSV/PDF) se muestra en **MAYUSCULAS**.
+- Toda la **informacion visible** en pantallas y exportes **CSV** se muestra en **MAYUSCULAS**.
+- El **informe PDF de capacitaciones** usa formato titulo (primera letra de cada palabra en mayuscula) y diseno mejorado.
 
 ### Asistencia laboral (pestaña Turno)
 
@@ -35,7 +36,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 - Busqueda por nombre, empresa, cargo o documento.
 - Marcacion con foto obligatoria solo el dia programado.
 - Cierre automatico o manual; export PDF/CSV.
-- El **informe PDF** solo se exporta si la capacitacion esta **cerrada** (si esta abierta, la app ofrece cerrarla antes).
+- El **informe PDF** (diseno con encabezado, tabla y evidencia fotografica) solo se exporta si la capacitacion esta **cerrada** (si esta abierta, la app ofrece cerrarla antes).
 
 ### Personas (internos y externos)
 

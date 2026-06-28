@@ -17,8 +17,13 @@ class CapacitacionExportService {
   static final CapacitacionExportService instance = CapacitacionExportService._();
 
   final _dateFormat = DateFormat('dd/MM/yyyy');
-  final _timeFormat = DateFormat('HH:mm:ss');
+  final _timeFormat = DateFormat('HH:mm');
   final _fileStamp = DateFormat('yyyyMMdd_HHmmss');
+
+  static final _azul = PdfColor.fromInt(0xFF1565C0);
+  static final _azulClaro = PdfColor.fromInt(0xFFE3F2FD);
+  static final _grisTexto = PdfColor.fromInt(0xFF424242);
+  static final _grisSuave = PdfColor.fromInt(0xFF757575);
 
   Future<File> exportCsv(int capacitacionId) async {
     final cap = await DbHelper.instance.getCapacitacion(capacitacionId);
@@ -63,17 +68,25 @@ class CapacitacionExportService {
     final generado = DateTime.now();
     final exportadoEn =
         '${_dateFormat.format(generado)} ${_timeFormat.format(generado)}';
-    final fuenteInformacion = TextoDisplay.mayus(
-      'Fuente de la informacion: exportado el $exportadoEn desde la app Control Asistencia',
-    );
 
     pw.Widget pdfFooter(pw.Context context) {
       return pw.Container(
-        alignment: pw.Alignment.centerLeft,
-        margin: const pw.EdgeInsets.only(top: 12),
-        child: pw.Text(
-          fuenteInformacion,
-          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+        padding: const pw.EdgeInsets.only(top: 8),
+        decoration: const pw.BoxDecoration(
+          border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
+        ),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              _pdfText('Control Asistencia · $exportadoEn'),
+              style: pw.TextStyle(fontSize: 8, color: _grisSuave),
+            ),
+            pw.Text(
+              'Pagina ${context.pageNumber} de ${context.pagesCount}',
+              style: pw.TextStyle(fontSize: 8, color: _grisSuave),
+            ),
+          ],
         ),
       );
     }
@@ -81,84 +94,41 @@ class CapacitacionExportService {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
+        margin: const pw.EdgeInsets.fromLTRB(40, 32, 40, 48),
         footer: pdfFooter,
         build: (context) => [
-          pw.Text(
-            'INFORME DE ASISTENCIA A CAPACITACION',
-            style: pw.TextStyle(
-              fontSize: 20,
-              fontWeight: pw.FontWeight.bold,
-            ),
-          ),
-          pw.SizedBox(height: 16),
-          _infoRow('CAPACITACION', cap.nombre),
-          _infoRow('TEMAS TRATADOS', cap.temas),
-          _infoRow('EXPOSITOR', cap.expositor),
-          _infoRow('FECHA PROGRAMADA', _dateFormat.format(cap.fecha)),
-          _infoRow('ESTADO', cap.estadoLabel),
-          if (cap.resultadoLabel != null)
-            _infoRow('RESULTADO', cap.resultadoLabel!),
-          if (cap.empresaNombre != null)
-            _infoRow('EMPRESA', cap.empresaNombre!),
-          _infoRow('TOTAL ASISTENTES', '${asistentes.length}'),
-          pw.SizedBox(height: 8),
-          pw.Text(
-            fuenteInformacion,
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey800),
-          ),
-          pw.SizedBox(height: 16),
+          _pdfHeader(cap.nombre),
+          pw.SizedBox(height: 20),
+          _infoCard(cap, asistentes.length),
           if (cap.tieneFotoGeneral) ...[
-            pw.Text(
-              'FOTO GENERAL DE LA CAPACITACION',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            pw.SizedBox(height: 20),
+            _sectionTitle('Foto General'),
+            pw.SizedBox(height: 10),
+            pw.Center(
+              child: pw.Container(
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.ClipRRect(
+                  horizontalRadius: 8,
+                  verticalRadius: 8,
+                  child: _buildImage(cap.fotoGeneralPath!, width: 320, height: 200),
+                ),
+              ),
             ),
-            pw.SizedBox(height: 8),
-            _buildImage(cap.fotoGeneralPath!, width: 280, height: 180),
-            pw.SizedBox(height: 16),
           ],
-          if (cap.resultado == ResultadoCapacitacion.noEjecutada.value) ...[
-            pw.Text(
-              'LA CAPACITACION NO REGISTRO ASISTENCIA Y QUEDO COMO NO EJECUTADA.',
-              style: const pw.TextStyle(fontSize: 11),
-            ),
-          ] else if (asistentes.isEmpty) ...[
-            pw.Text(
-              'NO HAY ASISTENTES REGISTRADOS.',
-              style: const pw.TextStyle(fontSize: 11),
-            ),
-          ] else ...[
-            pw.Text(
-              'LISTADO DE ASISTENTES',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 8),
-            pw.TableHelper.fromTextArray(
-              headers: const [
-                '#',
-                'NOMBRE',
-                'CARGO',
-                'DOCUMENTO',
-                'EMPRESA',
-                'TIPO',
-                'HORA',
-              ],
-              data: [
-                for (var i = 0; i < asistentes.length; i++)
-                  [
-                    '${i + 1}',
-                    _cell(asistentes[i].empleadoNombre ?? ''),
-                    _cell(asistentes[i].empleadoCargo ?? ''),
-                    _cell(asistentes[i].documentoLabel),
-                    _cell(asistentes[i].empresaNombre ?? ''),
-                    _cell(asistentes[i].tipoPersonaLabel),
-                    _timeFormat.format(asistentes[i].fechaHora),
-                  ],
-              ],
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              cellAlignment: pw.Alignment.centerLeft,
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-            ),
+          pw.SizedBox(height: 24),
+          if (cap.resultado == ResultadoCapacitacion.noEjecutada.value)
+            _noticeBox(
+              'La capacitacion no registro asistencia y quedo como no ejecutada.',
+            )
+          else if (asistentes.isEmpty)
+            _noticeBox('No hay asistentes registrados.')
+          else ...[
+            _sectionTitle('Listado De Asistentes'),
+            pw.SizedBox(height: 10),
+            _asistentesTable(asistentes),
           ],
         ],
       ),
@@ -169,29 +139,88 @@ class CapacitacionExportService {
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(40),
+          margin: const pw.EdgeInsets.fromLTRB(40, 32, 40, 48),
           footer: pdfFooter,
           build: (context) => [
-            pw.Text(
-              'EVIDENCIA FOTOGRAFICA INDIVIDUAL',
-              style: pw.TextStyle(
-                fontSize: 16,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-            pw.SizedBox(height: 12),
-            for (var i = 0; i < asistentes.length; i++) ...[
-              pw.Text(
-                '${i + 1}. ${_cell(asistentes[i].empleadoNombre ?? '')}'
-                '${_cargoPdfSuffix(asistentes[i].empleadoCargo)}'
-                ' · ${_cell(asistentes[i].documentoLabel)}'
-                ' · ${_timeFormat.format(asistentes[i].fechaHora)}',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 6),
-              _buildImage(asistentes[i].fotoPath, width: 120, height: 120),
-              pw.SizedBox(height: 16),
-            ],
+            _sectionTitle('Evidencia Fotografica Individual'),
+            pw.SizedBox(height: 14),
+            ...asistentes.asMap().entries.map((entry) {
+              final i = entry.key;
+              final a = entry.value;
+              return pw.Container(
+                margin: const pw.EdgeInsets.only(bottom: 16),
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  color: i.isEven ? PdfColors.grey100 : PdfColors.white,
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Container(
+                      width: 28,
+                      height: 28,
+                      alignment: pw.Alignment.center,
+                      decoration: pw.BoxDecoration(
+                        color: _azul,
+                        borderRadius: pw.BorderRadius.circular(14),
+                      ),
+                      child: pw.Text(
+                        '${i + 1}',
+                        style: pw.TextStyle(
+                          color: PdfColors.white,
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                    pw.SizedBox(width: 12),
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            _pdfText(a.empleadoNombre ?? ''),
+                            style: pw.TextStyle(
+                              fontSize: 12,
+                              fontWeight: pw.FontWeight.bold,
+                              color: _grisTexto,
+                            ),
+                          ),
+                          if (a.empleadoCargo != null &&
+                              a.empleadoCargo!.trim().isNotEmpty)
+                            pw.Text(
+                              _pdfText(a.empleadoCargo!),
+                              style: pw.TextStyle(fontSize: 10, color: _grisSuave),
+                            ),
+                          pw.SizedBox(height: 2),
+                          pw.Text(
+                            '${_pdfText(a.documentoLabel)} · '
+                            '${_pdfText(a.empresaNombre ?? '')} · '
+                            '${_pdfText(a.tipoPersonaLabel)} · '
+                            '${_timeFormat.format(a.fechaHora)}',
+                            style: pw.TextStyle(fontSize: 9, color: _grisSuave),
+                          ),
+                        ],
+                      ),
+                    ),
+                    pw.SizedBox(width: 12),
+                    pw.Container(
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(color: PdfColors.grey300),
+                        borderRadius: pw.BorderRadius.circular(6),
+                      ),
+                      child: pw.ClipRRect(
+                        horizontalRadius: 6,
+                        verticalRadius: 6,
+                        child: _buildImage(a.fotoPath, width: 88, height: 88),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       );
@@ -206,18 +235,181 @@ class CapacitacionExportService {
     return file;
   }
 
-  pw.Widget _infoRow(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 4),
-      child: pw.RichText(
-        text: pw.TextSpan(
-          children: [
-            pw.TextSpan(
-              text: '${TextoDisplay.mayus(label)}: ',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+  pw.Widget _pdfHeader(String nombreCapacitacion) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: pw.BoxDecoration(
+        color: _azul,
+        borderRadius: pw.BorderRadius.circular(10),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Informe De Asistencia A Capacitacion',
+            style: pw.TextStyle(
+              fontSize: 18,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.white,
             ),
-            pw.TextSpan(text: _cell(value)),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            _pdfText(nombreCapacitacion),
+            style: const pw.TextStyle(
+              fontSize: 13,
+              color: PdfColors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _sectionTitle(String title) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.only(bottom: 6),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(
+          bottom: pw.BorderSide(color: PdfColors.grey400, width: 1),
+        ),
+      ),
+      child: pw.Text(
+        _pdfText(title),
+        style: pw.TextStyle(
+          fontSize: 13,
+          fontWeight: pw.FontWeight.bold,
+          color: _azul,
+        ),
+      ),
+    );
+  }
+
+  pw.Widget _infoCard(Capacitacion cap, int totalAsistentes) {
+    final filas = <(String, String)>[
+      ('Temas Tratados', cap.temas),
+      ('Expositor', cap.expositor),
+      ('Fecha Programada', _dateFormat.format(cap.fecha)),
+      ('Estado', cap.estadoLabel),
+      if (cap.resultadoLabel != null) ('Resultado', cap.resultadoLabel!),
+      if (cap.empresaNombre != null) ('Empresa', cap.empresaNombre!),
+      ('Total Asistentes', '$totalAsistentes'),
+    ];
+
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: _azulClaro,
+        borderRadius: pw.BorderRadius.circular(10),
+        border: pw.Border.all(color: PdfColor.fromInt(0xFF90CAF9)),
+      ),
+      child: pw.Wrap(
+        spacing: 24,
+        runSpacing: 10,
+        children: [
+          for (final (label, value) in filas)
+            pw.SizedBox(
+              width: 220,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    _pdfText(label),
+                    style: pw.TextStyle(
+                      fontSize: 9,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _azul,
+                    ),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    _pdfText(value),
+                    style: pw.TextStyle(fontSize: 11, color: _grisTexto),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _noticeBox(String message) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(14),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.amber50,
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: PdfColors.amber200),
+      ),
+      child: pw.Text(
+        _pdfText(message),
+        style: pw.TextStyle(fontSize: 11, color: _grisTexto),
+      ),
+    );
+  }
+
+  pw.Widget _asistentesTable(List<AsistenciaCapacitacion> asistentes) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+      columnWidths: {
+        0: const pw.FixedColumnWidth(28),
+        1: const pw.FlexColumnWidth(2.2),
+        2: const pw.FlexColumnWidth(1.5),
+        3: const pw.FlexColumnWidth(1.5),
+        4: const pw.FlexColumnWidth(1.5),
+        5: const pw.FixedColumnWidth(52),
+        6: const pw.FixedColumnWidth(44),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: _azul),
+          children: [
+            for (final h in ['#', 'Nombre', 'Cargo', 'Documento', 'Empresa', 'Tipo', 'Hora'])
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                child: pw.Text(
+                  _pdfText(h),
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.white,
+                  ),
+                ),
+              ),
           ],
+        ),
+        for (var i = 0; i < asistentes.length; i++)
+          pw.TableRow(
+            decoration: pw.BoxDecoration(
+              color: i.isEven ? PdfColors.white : PdfColors.grey100,
+            ),
+            children: [
+              _tableCell('${i + 1}', bold: false),
+              _tableCell(asistentes[i].empleadoNombre ?? ''),
+              _tableCell(asistentes[i].empleadoCargo ?? ''),
+              _tableCell(asistentes[i].documentoLabel),
+              _tableCell(asistentes[i].empresaNombre ?? ''),
+              _tableCell(asistentes[i].tipoPersonaLabel),
+              _tableCell(_timeFormat.format(asistentes[i].fechaHora)),
+            ],
+          ),
+      ],
+    );
+  }
+
+  pw.Widget _tableCell(String value, {bool bold = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+      child: pw.Text(
+        _pdfText(value),
+        style: pw.TextStyle(
+          fontSize: 8.5,
+          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+          color: _grisTexto,
         ),
       ),
     );
@@ -226,34 +418,40 @@ class CapacitacionExportService {
   pw.Widget _buildImage(String path, {required double width, required double height}) {
     final file = File(path);
     if (!file.existsSync()) {
-      return pw.Text('FOTO NO DISPONIBLE');
+      return pw.Container(
+        width: width,
+        height: height,
+        alignment: pw.Alignment.center,
+        color: PdfColors.grey200,
+        child: pw.Text(
+          _pdfText('Foto no disponible'),
+          style: pw.TextStyle(fontSize: 9, color: _grisSuave),
+        ),
+      );
     }
     final bytes = file.readAsBytesSync();
     final image = pw.MemoryImage(bytes);
     return pw.Image(image, width: width, height: height, fit: pw.BoxFit.cover);
   }
 
-  String _cargoPdfSuffix(String? cargo) {
-    if (cargo == null || cargo.trim().isEmpty) return '';
-    return ' · ${_cell(cargo)}';
-  }
+  String _pdfText(String value) => TextoDisplay.tituloPalabras(value);
 
-  String _cell(String value) => TextoDisplay.mayus(value);
+  String _csvCell(String value) => TextoDisplay.mayus(value);
 
   String _csvRow(Capacitacion cap, AsistenciaCapacitacion a) {
     return [
-      _escape(_cell(cap.nombre)),
-      _escape(_cell(cap.temas)),
-      _escape(_cell(cap.expositor)),
+      _escape(_csvCell(cap.nombre)),
+      _escape(_csvCell(cap.temas)),
+      _escape(_csvCell(cap.expositor)),
       _dateFormat.format(cap.fecha),
-      _cell(cap.estadoLabel),
-      _escape(_cell(cap.resultadoLabel ?? '')),
-      _escape(_cell(a.empresaNombre ?? '')),
-      _cell(a.tipoPersonaLabel),
-      _escape(_cell(a.empleadoNombre ?? '')),
-      _escape(_cell(a.empleadoCargo ?? '')),
-      _escape(_cell(a.empleadoTipoDocumento ?? '')),
-      _escape(_cell(a.empleadoNumeroDocumento ?? '')),
+      _csvCell(cap.estadoLabel),
+      _escape(_csvCell(cap.resultadoLabel ?? '')),
+      _escape(_csvCell(a.empresaNombre ?? '')),
+      _csvCell(a.tipoPersonaLabel),
+      _escape(_csvCell(a.empleadoNombre ?? '')),
+      _escape(_csvCell(a.empleadoCargo ?? '')),
+      _escape(_csvCell(a.empleadoTipoDocumento ?? '')),
+      _escape(_csvCell(a.empleadoNumeroDocumento ?? '')),
       _timeFormat.format(a.fechaHora),
       _escape(a.fotoPath),
     ].join(',');
@@ -261,12 +459,12 @@ class CapacitacionExportService {
 
   String _csvEmptyRow(Capacitacion cap) {
     return [
-      _escape(_cell(cap.nombre)),
-      _escape(_cell(cap.temas)),
-      _escape(_cell(cap.expositor)),
+      _escape(_csvCell(cap.nombre)),
+      _escape(_csvCell(cap.temas)),
+      _escape(_csvCell(cap.expositor)),
       _dateFormat.format(cap.fecha),
-      _cell(cap.estadoLabel),
-      _escape(_cell(cap.resultadoLabel ?? '')),
+      _csvCell(cap.estadoLabel),
+      _escape(_csvCell(cap.resultadoLabel ?? '')),
       '',
       '',
       '',
@@ -312,7 +510,7 @@ class CapacitacionExportService {
   Future<void> shareFile(File file, {String? text}) async {
     await Share.shareXFiles(
       [XFile(file.path)],
-      text: text ?? 'INFORME DE CAPACITACION',
+      text: text ?? 'Informe de capacitacion',
     );
   }
 }
