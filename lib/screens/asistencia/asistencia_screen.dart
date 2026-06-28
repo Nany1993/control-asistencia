@@ -106,7 +106,9 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
     await _cargarPersonas();
   }
 
-  List<Empleado> get _personasFiltradas {
+  static const _maxResultadosBusqueda = 10;
+
+  List<Empleado> get _coincidenciasBusqueda {
     if (_busqueda.text.trim().isEmpty) return [];
     return _personas.where((p) {
       return PersonaSearch.matches(
@@ -116,8 +118,14 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
         cargo: p.cargo,
         query: _busqueda.text,
       );
-    }).take(10).toList();
+    }).toList();
   }
+
+  List<Empleado> get _personasFiltradas =>
+      _coincidenciasBusqueda.take(_maxResultadosBusqueda).toList();
+
+  bool get _hayMasCoincidencias =>
+      _coincidenciasBusqueda.length > _maxResultadosBusqueda;
 
   void _seleccionarPersona(Empleado persona) {
     setState(() {
@@ -209,6 +217,52 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
     }
   }
 
+  Future<Turno?> _turnoParaCierre(Registro entradaPendiente) async {
+    if (entradaPendiente.turnoId != null) {
+      final turno = await DbHelper.instance.getTurno(entradaPendiente.turnoId!);
+      if (turno != null) return turno;
+    }
+    if (_turnosAsignados.isNotEmpty) {
+      return TurnoEvaluator.turnoParaFecha(
+        _turnosAsignados,
+        entradaPendiente.fechaHora,
+      );
+    }
+    return _turno;
+  }
+
+  Future<Registro?> _cerrarEntradaPendienteSiAplica(DateTime ahora) async {
+    if (_tipo != TipoMarcacion.entrada) return _ultimoRegistro;
+    if (!MarcacionValidator.requiereCierreSalidaPendiente(_ultimoRegistro, ahora: ahora)) {
+      return _ultimoRegistro;
+    }
+
+    final entradaPendiente = _ultimoRegistro!;
+    final turnoCierre = await _turnoParaCierre(entradaPendiente);
+    final salidaAuto = Registro(
+      empresaId: entradaPendiente.empresaId,
+      empleadoId: entradaPendiente.empleadoId,
+      tipo: TipoMarcacion.salida,
+      fechaHora: MarcacionValidator.fechaCierreSalidaPendiente(
+        entradaPendiente,
+        turno: turnoCierre,
+      ),
+      fotoPath: PhotoService.sistemaSinFoto,
+      observacion: MarcacionValidator.observacionCierreAutomatico,
+      turnoId: turnoCierre?.id ?? entradaPendiente.turnoId,
+      empresaNombre: entradaPendiente.empresaNombre ?? _empresa!.nombre,
+      empleadoCargo: entradaPendiente.empleadoCargo ?? _empleado!.cargo,
+      empleadoNombre: entradaPendiente.empleadoNombre ?? _empleado!.nombre,
+      empleadoTipoDocumento:
+          entradaPendiente.empleadoTipoDocumento ?? _empleado!.tipoDocumento,
+      empleadoNumeroDocumento:
+          entradaPendiente.empleadoNumeroDocumento ?? _empleado!.numeroDocumento,
+    );
+
+    await DbHelper.instance.insertRegistro(salidaAuto);
+    return salidaAuto;
+  }
+
   Future<void> _guardar() async {
     if (_empresa?.id == null || _empleado?.id == null || _tipo == null || _foto == null) {
       return;
@@ -228,6 +282,17 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
     setState(() => _saving = true);
     try {
       final ahora = DateTime.now();
+      var ultimoParaEvaluar = _ultimoRegistro;
+      var cierreAutomatico = false;
+
+      if (_tipo == TipoMarcacion.entrada) {
+        final cerrado = await _cerrarEntradaPendienteSiAplica(ahora);
+        if (cerrado != _ultimoRegistro) {
+          ultimoParaEvaluar = cerrado;
+          cierreAutomatico = true;
+        }
+      }
+
       MotivoSalida? motivoSalida;
       String? radicado;
       String? notaSalida;
@@ -236,21 +301,18 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
           _turno != null &&
           _tipo == TipoMarcacion.salida &&
           TurnoEvaluator.esSalidaAnticipada(turno: _turno!, fechaHora: ahora)) {
-        if (TurnoEvaluator.esHorarioAlmuerzo(turno: _turno!, fechaHora: ahora)) {
-          motivoSalida = MotivoSalida.almuerzo;
-        } else {
-          setState(() => _saving = false);
-          final data = await showDialog<SalidaAnticipadaData>(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => const SalidaAnticipadaDialog(),
-          );
-          if (data == null || !mounted) return;
-          motivoSalida = data.motivo;
-          radicado = data.radicado;
-          notaSalida = data.nota;
-          setState(() => _saving = true);
-        }
+        setState(() => _saving = false);
+        if (!mounted) return;
+        final data = await showDialog<SalidaAnticipadaData>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const SalidaAnticipadaDialog(),
+        );
+        if (data == null || !mounted) return;
+        motivoSalida = data.motivo;
+        radicado = data.radicado;
+        notaSalida = data.nota;
+        setState(() => _saving = true);
       }
 
       String? observacion;
@@ -259,7 +321,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
           turno: _turno,
           tipo: _tipo!,
           fechaHora: ahora,
-          ultimoRegistro: _ultimoRegistro,
+          ultimoRegistro: ultimoParaEvaluar,
           motivoSalida: motivoSalida,
         );
         if (radicado != null && radicado.isNotEmpty) {
@@ -287,6 +349,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
           motivoSalida: motivoSalida?.value,
           radicado: radicado,
           turnoId: _turno?.id,
+          empresaNombre: _empresa!.nombre,
           empleadoCargo: _empleado!.cargo,
           empleadoNombre: _empleado!.nombre,
           empleadoTipoDocumento: _empleado!.tipoDocumento,
@@ -299,7 +362,10 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              '${_tipo!.label} registrada para ${_empleado!.nombre}$extra',
+              cierreAutomatico
+                  ? 'Salida automatica del dia anterior (No registro salida). '
+                      '${_tipo!.label} registrada para ${_empleado!.nombre}$extra'
+                  : '${_tipo!.label} registrada para ${_empleado!.nombre}$extra',
             ),
           ),
         );
@@ -430,7 +496,18 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                       )
                     else if (filtradas.isEmpty)
                       const Text('Sin coincidencias')
-                    else
+                    else ...[
+                      if (_hayMasCoincidencias)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            'Hay mas de $_maxResultadosBusqueda coincidencias. '
+                            'Acote la busqueda.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.orange.shade800,
+                                ),
+                          ),
+                        ),
                       ...filtradas.map(
                         (persona) {
                           final subtitulo = persona.esExterno
@@ -454,6 +531,7 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
                           );
                         },
                       ),
+                    ],
                     if (_turnosAsignados.isNotEmpty && !_esExterno && _empleado != null) ...[
                       const SizedBox(height: 8),
                       Card(

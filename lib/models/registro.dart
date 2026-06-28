@@ -77,6 +77,7 @@ class Registro {
       'motivo_salida': motivoSalida,
       'radicado': radicado,
       'turno_id': turnoId,
+      'empresa_nombre': empresaNombre ?? '',
       'empleado_cargo': empleadoCargo ?? '',
       'empleado_nombre': empleadoNombre ?? '',
       'empleado_tipo_documento': empleadoTipoDocumento ?? '',

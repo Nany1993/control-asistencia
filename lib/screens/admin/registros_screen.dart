@@ -7,6 +7,7 @@ import '../../database/db_helper.dart';
 import '../../models/empleado.dart';
 import '../../models/empresa.dart';
 import '../../models/registro.dart';
+import '../../services/photo_service.dart';
 import '../../utils/persona_search.dart';
 
 class RegistrosScreen extends StatefulWidget {
@@ -112,6 +113,7 @@ class _RegistrosScreenState extends State<RegistrosScreen> {
   }
 
   void _verFoto(Registro registro) {
+    final esSistema = PhotoService.esFotoSistema(registro.fotoPath);
     final file = File(registro.fotoPath);
     showDialog<void>(
       context: context,
@@ -127,14 +129,18 @@ class _RegistrosScreenState extends State<RegistrosScreen> {
                 textAlign: TextAlign.center,
               ),
             ),
-            if (file.existsSync())
+            if (!esSistema && file.existsSync())
               InteractiveViewer(
                 child: Image.file(file, fit: BoxFit.contain),
               )
             else
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Foto no encontrada en el dispositivo'),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  esSistema
+                      ? 'Marcacion automatica del sistema (sin foto)'
+                      : 'Foto no encontrada en el dispositivo',
+                ),
               ),
             Padding(
               padding: const EdgeInsets.all(16),

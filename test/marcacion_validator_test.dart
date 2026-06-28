@@ -1,5 +1,7 @@
 import 'package:control_asistencia/models/registro.dart';
+import 'package:control_asistencia/models/turno.dart';
 import 'package:control_asistencia/services/marcacion_validator.dart';
+import 'package:control_asistencia/services/turno_evaluator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -55,21 +57,80 @@ void main() {
         TipoMarcacion.entrada,
       );
       expect(
-        MarcacionValidator.puedeMarcar(
-          entradaAyer,
-          TipoMarcacion.entrada,
-          ahora: hoy,
-        ),
+        MarcacionValidator.requiereCierreSalidaPendiente(entradaAyer, ahora: hoy),
         isTrue,
       );
-      expect(
-        MarcacionValidator.puedeMarcar(
-          entradaAyer,
-          TipoMarcacion.salida,
-          ahora: hoy,
-        ),
-        isFalse,
+    });
+
+    test('fecha cierre usa hora de salida del turno', () {
+      final entrada = Registro(
+        empresaId: 1,
+        empleadoId: 1,
+        tipo: TipoMarcacion.entrada,
+        fechaHora: DateTime(2026, 6, 26, 8),
+        fotoPath: 'foto.jpg',
       );
+      const turno = Turno(
+        nombre: 'Oficina',
+        horaEntrada: '08:00',
+        horaSalida: '17:00',
+      );
+
+      final cierre = MarcacionValidator.fechaCierreSalidaPendiente(
+        entrada,
+        turno: turno,
+      );
+
+      expect(cierre, DateTime(2026, 6, 26, 17, 0));
+    });
+  });
+
+  group('TurnoEvaluator', () {
+    test('retraso solo en la primera entrada del dia', () {
+      const turno = Turno(
+        nombre: 'Oficina',
+        horaEntrada: '08:00',
+        horaSalida: '17:00',
+        toleranciaMinutos: 0,
+        diasSemana: '1,2,3,4,5,6,7',
+      );
+      final salidaAlmuerzo = Registro(
+        empresaId: 1,
+        empleadoId: 1,
+        tipo: TipoMarcacion.salida,
+        fechaHora: DateTime(2026, 6, 27, 12),
+        fotoPath: 'foto.jpg',
+      );
+      final reingreso = DateTime(2026, 6, 27, 13, 30);
+
+      expect(
+        TurnoEvaluator.evaluarMarcacion(
+          turno: turno,
+          tipo: TipoMarcacion.entrada,
+          fechaHora: reingreso,
+          ultimoRegistro: salidaAlmuerzo,
+        ),
+        isNull,
+      );
+    });
+
+    test('marca llegada tarde en la primera entrada del dia', () {
+      const turno = Turno(
+        nombre: 'Oficina',
+        horaEntrada: '08:00',
+        horaSalida: '17:00',
+        toleranciaMinutos: 0,
+        diasSemana: '1,2,3,4,5,6,7',
+      );
+
+      final obs = TurnoEvaluator.evaluarMarcacion(
+        turno: turno,
+        tipo: TipoMarcacion.entrada,
+        fechaHora: DateTime(2026, 6, 27, 8, 20),
+        ultimoRegistro: null,
+      );
+
+      expect(obs, contains('Llegada tarde'));
     });
   });
 }

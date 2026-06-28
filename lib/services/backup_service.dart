@@ -14,7 +14,7 @@ class BackupService {
   BackupService._();
   static final BackupService instance = BackupService._();
 
-  static const _dbVersion = 12;
+  static const _dbVersion = 13;
   final _fileStamp = DateFormat('yyyyMMdd_HHmmss');
 
   Future<File> createBackup() async {
@@ -99,6 +99,13 @@ class BackupService {
     final manifest = jsonDecode(utf8.decode(manifestFile.content)) as Map<String, dynamic>;
     if (manifest['app'] != 'control_asistencia') {
       throw BackupRestoreException('El archivo no es un respaldo de Control Asistencia.');
+    }
+    final version = manifest['db_version'];
+    if (version is! int || version > _dbVersion) {
+      throw BackupRestoreException(
+        'Respaldo incompatible (version $version). '
+        'Actualice la app e intente de nuevo.',
+      );
     }
     if (dbArchiveFile == null) {
       throw BackupRestoreException('Respaldo invalido: falta la base de datos.');

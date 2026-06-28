@@ -87,7 +87,10 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
 
     if (cap == null) return;
 
-    final personas = await DbHelper.instance.getEmpleados(soloActivos: true);
+    final personas = await DbHelper.instance.getEmpleados(
+      soloActivos: true,
+      soloEmpresasActivas: true,
+    );
     final asistieron = await DbHelper.instance.getEmpleadoIdsAsistenciaCapacitacion(
       cap.id!,
     );
@@ -99,7 +102,9 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
     }
   }
 
-  List<Empleado> get _personasFiltradas {
+  static const _maxResultadosBusqueda = 10;
+
+  List<Empleado> get _coincidenciasBusqueda {
     if (_busqueda.text.trim().isEmpty) return [];
     return _personas.where((p) {
       return PersonaSearch.matches(
@@ -110,8 +115,14 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
         empresaNombre: p.empresaNombre ?? '',
         query: _busqueda.text,
       );
-    }).take(10).toList();
+    }).toList();
   }
+
+  List<Empleado> get _personasFiltradas =>
+      _coincidenciasBusqueda.take(_maxResultadosBusqueda).toList();
+
+  bool get _hayMasCoincidencias =>
+      _coincidenciasBusqueda.length > _maxResultadosBusqueda;
 
   void _seleccionarPersona(Empleado persona) {
     if (_asistieronIds.contains(persona.id)) {
@@ -398,7 +409,18 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
               )
             else if (filtradas.isEmpty)
               const Text('Sin coincidencias')
-            else
+            else ...[
+              if (_hayMasCoincidencias)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Hay mas de $_maxResultadosBusqueda coincidencias. '
+                    'Acote la busqueda.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.orange.shade800,
+                        ),
+                  ),
+                ),
               ...filtradas.map(
                 (persona) => Card(
                   child: ListTile(
@@ -409,6 +431,7 @@ class _CapacitacionScreenState extends State<CapacitacionScreen> {
                   ),
                 ),
               ),
+            ],
             const SizedBox(height: 20),
             const _SectionTitle('3. Foto'),
             if (_foto != null)

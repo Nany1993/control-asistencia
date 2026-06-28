@@ -1,10 +1,18 @@
 import '../models/registro.dart';
+import '../models/turno.dart';
 
 class MarcacionValidator {
   MarcacionValidator._();
 
   static bool _esMismoDia(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  static DateTime _horaEnDia(DateTime fecha, String hhmm) {
+    final partes = hhmm.split(':');
+    final h = int.parse(partes[0]);
+    final m = int.parse(partes[1]);
+    return DateTime(fecha.year, fecha.month, fecha.day, h, m);
   }
 
   static TipoMarcacion tipoPermitido(Registro? ultimo, {DateTime? ahora}) {
@@ -28,6 +36,34 @@ class MarcacionValidator {
   }) {
     return tipoPermitido(ultimo, ahora: ahora) == tipo;
   }
+
+  /// Entrada de un dia anterior sin salida registrada.
+  static bool requiereCierreSalidaPendiente(
+    Registro? ultimo, {
+    DateTime? ahora,
+  }) {
+    if (ultimo == null) return false;
+    if (ultimo.tipo != TipoMarcacion.entrada) return false;
+    return !_esMismoDia(ultimo.fechaHora, ahora ?? DateTime.now());
+  }
+
+  /// Hora de cierre automatico: fin del turno del dia de la entrada o 23:59.
+  static DateTime fechaCierreSalidaPendiente(
+    Registro entradaAbierta, {
+    Turno? turno,
+  }) {
+    final dia = DateTime(
+      entradaAbierta.fechaHora.year,
+      entradaAbierta.fechaHora.month,
+      entradaAbierta.fechaHora.day,
+    );
+    if (turno != null) {
+      return _horaEnDia(dia, turno.horaSalida);
+    }
+    return DateTime(dia.year, dia.month, dia.day, 23, 59, 59);
+  }
+
+  static const observacionCierreAutomatico = 'No registro salida';
 
   static String mensajeBloqueo(
     Registro? ultimo,

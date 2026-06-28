@@ -4,7 +4,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.8.2
+**Version actual:** 1.8.3
 
 ## Funciones
 
@@ -13,18 +13,20 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 - Flujo kiosco: empresa → **buscar** persona → tipo (entrada/salida) → foto → guardar.
 - No se muestra la lista completa ni marcaciones anteriores; solo resultados de busqueda.
 - Pestañas **Internos** y **Externos** con busqueda por nombre, cargo o documento.
-- Alternancia entrada/salida el mismo dia; si quedo una entrada sin salida de un dia anterior, permite **nueva entrada** al dia siguiente.
+- Alternancia entrada/salida el mismo dia.
+- Si quedo una **entrada sin salida** de un dia anterior, al marcar entrada hoy el sistema registra automaticamente una salida con observacion **"No registro salida"** (hora de cierre del turno o fin de dia).
+- **Llegada tarde** solo en la **primera entrada del dia** (reingresos el mismo dia no generan retraso).
 
 ### Internos y turnos
 
 - **Turnos** globales: hora entrada/salida, tolerancia, dias de la semana.
-- Horario de **almuerzo** opcional en el turno (inicio y fin).
+- Horario de **almuerzo** opcional: **solo informativo** en la app (no afecta marcaciones).
 - Asignacion de **uno o varios turnos** a cada empleado interno.
-- **Llegada tarde**, **salida anticipada** (con motivo y radicado), **almuerzo** y reingreso.
+- **Salida anticipada** con motivo y radicado cuando aplica.
 
 ### Capacitaciones (pestaña Capacitacion)
 
-- Cualquier persona activa (internos y externos de todas las empresas) puede asistir.
+- Personas activas de **empresas activas** (internos y externos).
 - Flujo kiosco: capacitacion → **buscar** persona → foto → registrar (sin listar asistencias previas).
 - Busqueda por nombre, empresa, cargo o documento.
 - Marcacion con foto obligatoria solo el dia programado.
@@ -41,7 +43,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 Menu: Empresas → Turnos → Empleados → Externos → Capacitaciones → Asistencia capacitaciones → Registros → Exportar → Respaldo → Modificar PIN.
 
 - Exportar asistencia laboral en **CSV o PDF**.
-- **Respaldo:** generar ZIP o **restaurar** desde un ZIP previo.
+- **Respaldo:** generar ZIP o **restaurar** desde un ZIP previo (valida version compatible).
 - Capacitaciones cerradas **no se pueden editar** (solo cerrar o eliminar si no tienen asistencias)
 
 ## Generar APK
@@ -70,4 +72,3 @@ Admin → **Respaldo de datos**:
 - La hora de marcacion usa el reloj del dispositivo.
 - Los **turnos** son compartidos entre todas las empresas.
 - Integridad referencial al eliminar empresas, personas, turnos o capacitaciones con historial.
-

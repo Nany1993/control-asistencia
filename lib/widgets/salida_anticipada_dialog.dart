@@ -57,6 +57,7 @@ class _SalidaAnticipadaDialogState extends State<SalidaAnticipadaDialog> {
                 border: OutlineInputBorder(),
               ),
               items: MotivoSalida.values
+                  .where((m) => m != MotivoSalida.almuerzo)
                   .map(
                     (m) => DropdownMenuItem(
                       value: m,
@@ -94,14 +95,6 @@ class _SalidaAnticipadaDialogState extends State<SalidaAnticipadaDialog> {
                 onChanged: (_) => setState(() => _error = null),
               ),
             ],
-            if (_motivo == MotivoSalida.almuerzo)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  'Almuerzo no requiere radicado.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
             if (_error != null) ...[
               const SizedBox(height: 8),
               Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),

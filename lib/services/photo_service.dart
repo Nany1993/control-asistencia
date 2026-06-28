@@ -7,6 +7,11 @@ class PhotoService {
   PhotoService._();
   static final PhotoService instance = PhotoService._();
 
+  static const sistemaSinFoto = 'sistema://sin-foto';
+
+  static bool esFotoSistema(String path) =>
+      path == sistemaSinFoto || path.startsWith('sistema://');
+
   Future<String> savePhoto(File source, int empresaId, int empleadoId) async {
     final appDir = await getApplicationDocumentsDirectory();
     final photosDir = Directory(p.join(appDir.path, 'fotos'));
@@ -33,7 +38,7 @@ class PhotoService {
     return _saveInSubdir(
       source,
       'fotos_capacitaciones',
-      'cap${capacitacionId}_emp${empleadoId}',
+      'cap${capacitacionId}_emp$empleadoId',
     );
   }
 

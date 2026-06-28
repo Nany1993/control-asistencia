@@ -279,7 +279,7 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Definir horario de almuerzo'),
-              subtitle: const Text('Salidas en ese rango se registran como almuerzo sin radicado'),
+              subtitle: const Text('Solo informativo en la app; no afecta las marcaciones'),
               value: _definirAlmuerzo,
               onChanged: (v) => setState(() => _definirAlmuerzo = v),
             ),

@@ -41,7 +41,7 @@ class DbHelper {
 
     return openDatabase(
       path,
-      version: 12,
+      version: 13,
       onCreate: (db, version) async {
         await _createTables(db);
       },
@@ -187,6 +187,18 @@ class DbHelper {
             "ALTER TABLE empresas ADD COLUMN nit TEXT NOT NULL DEFAULT ''",
           );
         }
+        if (oldVersion < 13) {
+          await db.execute(
+            "ALTER TABLE registros ADD COLUMN empresa_nombre TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute('''
+            UPDATE registros
+            SET empresa_nombre = (
+              SELECT nombre FROM empresas WHERE empresas.id = registros.empresa_id
+            )
+            WHERE empresa_nombre = ''
+          ''');
+        }
       },
     );
   }
@@ -241,6 +253,7 @@ class DbHelper {
         motivo_salida TEXT,
         radicado TEXT,
         turno_id INTEGER,
+        empresa_nombre TEXT NOT NULL DEFAULT '',
         empleado_cargo TEXT NOT NULL DEFAULT '',
         empleado_nombre TEXT NOT NULL DEFAULT '',
         empleado_tipo_documento TEXT NOT NULL DEFAULT '',
@@ -344,7 +357,7 @@ class DbHelper {
              COALESCE(NULLIF(r.empleado_numero_documento, ''), e.numero_documento) AS empleado_numero_documento,
              e.es_externo AS empleado_es_externo,
              COALESCE(NULLIF(r.empleado_cargo, ''), e.cargo) AS empleado_cargo,
-             emp.nombre AS empresa_nombre,
+             COALESCE(NULLIF(r.empresa_nombre, ''), emp.nombre) AS empresa_nombre,
              t.nombre AS turno_nombre
       FROM registros r
       JOIN empleados e ON e.id = r.empleado_id
@@ -607,6 +620,7 @@ class DbHelper {
   Future<List<Empleado>> getEmpleados({
     int? empresaId,
     bool soloActivos = false,
+    bool soloEmpresasActivas = false,
     bool? esExterno,
   }) async {
     final db = await database;
@@ -619,6 +633,9 @@ class DbHelper {
     }
     if (soloActivos) {
       filters.add('e.activo = 1');
+    }
+    if (soloEmpresasActivas) {
+      filters.add('(emp.id IS NULL OR emp.activa = 1)');
     }
     if (esExterno != null) {
       filters.add('e.es_externo = ?');
