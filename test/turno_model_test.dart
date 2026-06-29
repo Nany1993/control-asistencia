@@ -1,5 +1,6 @@
 import 'package:control_asistencia/models/registro.dart';
 import 'package:control_asistencia/models/turno.dart';
+import 'package:control_asistencia/services/marcacion_validator.dart';
 import 'package:control_asistencia/services/turno_evaluator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -155,6 +156,51 @@ void main() {
           ultimoRegistro: null,
         ),
         contains('LLEGADA TARDE'),
+      );
+    });
+
+    test('turno nocturno con salida tarde del dia siguiente (ej 18:00)', () {
+      const turno = Turno(
+        id: 2,
+        nombre: 'Vigilancia',
+        horaEntrada: '17:00',
+        horaSalida: '18:00',
+        turnoNocturno: true,
+        diasSemana: '1,2,3,4,5,6,7',
+      );
+
+      final fin = TurnoEvaluator.finTurnoEsperado(
+        Registro(
+          empresaId: 1,
+          empleadoId: 1,
+          tipo: TipoMarcacion.entrada,
+          fechaHora: DateTime(2026, 6, 29, 17),
+          fotoPath: 'f.jpg',
+        ),
+        turno,
+      );
+      expect(fin, DateTime(2026, 6, 30, 18));
+
+      expect(
+        TurnoEvaluator.turnoParaFecha(
+          [turno],
+          DateTime(2026, 6, 30, 8),
+        ),
+        turno,
+      );
+      expect(
+        MarcacionValidator.requiereCierreSalidaPendiente(
+          Registro(
+            empresaId: 1,
+            empleadoId: 1,
+            tipo: TipoMarcacion.entrada,
+            fechaHora: DateTime(2026, 6, 29, 17),
+            fotoPath: 'f.jpg',
+          ),
+          ahora: DateTime(2026, 6, 30, 14),
+          turno: turno,
+        ),
+        isFalse,
       );
     });
   });

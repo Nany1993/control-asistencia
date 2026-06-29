@@ -4,7 +4,7 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 
 **Repositorio:** [github.com/Nany1993/control-asistencia](https://github.com/Nany1993/control-asistencia)
 
-**Version actual:** 1.8.10
+**Version actual:** 1.8.11
 
 ## Funciones
 
@@ -19,14 +19,14 @@ App Android offline para control de asistencia con foto, entrada/salida, turnos,
 - No se muestra la lista completa ni marcaciones anteriores; solo resultados de busqueda.
 - Pestañas **Internos** y **Externos** con busqueda por nombre, cargo o documento.
 - Alternancia entrada/salida el mismo dia.
-- **Turnos nocturnos** (vigilancia, porteria): entrada un dia y salida al dia siguiente. No se cierra el turno a medianoche; el cierre automatico ocurre solo despues de la hora de salida del turno.
+- **Turnos nocturnos** (vigilancia, porteria): entrada un dia y salida al **dia siguiente a cualquier hora** (ej. 17:00 a 14:00 o 22:00). No se cierra el turno a medianoche; el cierre automatico ocurre solo despues de la hora de salida del turno.
 - Si quedo una **entrada sin salida** de un dia anterior (turno diurno), al marcar entrada hoy el sistema registra automaticamente una salida con observacion **"No registro salida"** (hora de cierre del turno o fin de dia).
 - **Llegada tarde** solo en la **primera entrada del dia** (reingresos el mismo dia no generan retraso).
 
 ### Internos y turnos
 
 - **Turnos** globales: hora entrada/salida, tolerancia, dias de la semana.
-- Opcion **turno nocturno** cuando la salida es al dia siguiente (ej. 17:00 a 10:00).
+- Opcion **turno nocturno** cuando la salida es al dia siguiente (ej. 17:00 hoy, 18:00 manana).
 - Horario de **almuerzo** opcional: **solo informativo** en la app (no afecta marcaciones).
 - Asignacion de **uno o varios turnos** a cada empleado interno.
 - **Salida anticipada** con motivo y radicado cuando aplica.

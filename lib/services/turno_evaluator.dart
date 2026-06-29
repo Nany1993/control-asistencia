@@ -96,14 +96,37 @@ class TurnoEvaluator {
   }
 
   static bool _fechaDentroDeTurno(Turno turno, DateTime fechaHora) {
+    if (esNocturno(turno)) {
+      return _fechaDentroDeTurnoNocturno(turno, fechaHora);
+    }
     final dia = DateTime(fechaHora.year, fechaHora.month, fechaHora.day);
     final inicio = _horaEnDia(dia, turno.horaEntrada);
-    if (esNocturno(turno)) {
-      final fin = _horaEnDia(dia.add(const Duration(days: 1)), turno.horaSalida);
-      return !fechaHora.isBefore(inicio) && fechaHora.isBefore(fin);
-    }
     final fin = _horaEnDia(dia, turno.horaSalida);
     return !fechaHora.isBefore(inicio) && !fechaHora.isAfter(fin);
+  }
+
+  /// Turno nocturno: entrada un dia, salida al dia siguiente (cualquier hora).
+  static bool _fechaDentroDeTurnoNocturno(Turno turno, DateTime fechaHora) {
+    final dia = DateTime(fechaHora.year, fechaHora.month, fechaHora.day);
+
+    // Turno que empezo ayer y termina hoy a hora_salida
+    final inicioAyer = _horaEnDia(
+      dia.subtract(const Duration(days: 1)),
+      turno.horaEntrada,
+    );
+    final finHoy = _horaEnDia(dia, turno.horaSalida);
+    if (!fechaHora.isBefore(inicioAyer) && fechaHora.isBefore(finHoy)) {
+      return true;
+    }
+
+    // Turno que empieza hoy y termina manana a hora_salida
+    final inicioHoy = _horaEnDia(dia, turno.horaEntrada);
+    final finManana = _horaEnDia(dia.add(const Duration(days: 1)), turno.horaSalida);
+    if (!fechaHora.isBefore(inicioHoy) && fechaHora.isBefore(finManana)) {
+      return true;
+    }
+
+    return false;
   }
 
   static bool esSalidaAnticipada({

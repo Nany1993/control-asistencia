@@ -287,8 +287,12 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Hora salida'),
-              subtitle: Text(_formatTime(_salida)),
+              title: Text(_turnoNocturno ? 'Hora salida (dia siguiente)' : 'Hora salida'),
+              subtitle: Text(
+                _turnoNocturno
+                    ? '${_formatTime(_salida)} del dia siguiente'
+                    : _formatTime(_salida),
+              ),
               trailing: IconButton(
                 icon: const Icon(Icons.access_time),
                 onPressed: () => _pickTime(tipo: 'salida'),
@@ -298,7 +302,8 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Turno nocturno'),
               subtitle: const Text(
-                'La salida es al dia siguiente (ej. entra 17:00, sale 10:00). '
+                'La salida es al dia siguiente, a cualquier hora '
+                '(ej. entra 17:00 hoy, sale 14:00 o 22:00 manana). '
                 'No cierra el turno a medianoche.',
               ),
               value: _turnoNocturno,
