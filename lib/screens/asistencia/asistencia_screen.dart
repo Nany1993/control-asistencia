@@ -276,7 +276,9 @@ class _AsistenciaScreenState extends State<AsistenciaScreen> {
   }
 
   Future<Registro?> _cerrarEntradaPendienteSiAplica(DateTime ahora) async {
-    if (_tipo != TipoMarcacion.entrada) return _ultimoRegistro;
+    if (_tipo != TipoMarcacion.entrada || _ultimoRegistro == null) {
+      return _ultimoRegistro;
+    }
 
     final entradaPendiente = _ultimoRegistro!;
     final turnoCierre = await _turnoParaCierre(entradaPendiente);
