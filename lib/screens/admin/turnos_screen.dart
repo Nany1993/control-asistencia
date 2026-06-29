@@ -188,13 +188,15 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
   void _sugerirTurnoNocturno() {
     final entrada = _formatTime(_entrada);
     final salida = _formatTime(_salida);
-    final sugerido = Turno(
+    final cruzaMedianoche = Turno(
       nombre: '',
       horaEntrada: entrada,
       horaSalida: salida,
     ).esNocturno;
-    if (sugerido != _turnoNocturno) {
-      setState(() => _turnoNocturno = sugerido);
+    // Solo sugerir activar; no desactivar si el usuario ya marco turno nocturno
+    // (ej. 17:00 hoy -> 18:00 manana).
+    if (cruzaMedianoche && !_turnoNocturno) {
+      setState(() => _turnoNocturno = true);
     }
   }
 
@@ -302,8 +304,8 @@ class _TurnoFormDialogState extends State<_TurnoFormDialog> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Turno nocturno'),
               subtitle: const Text(
-                'La salida es al dia siguiente, a cualquier hora '
-                '(ej. entra 17:00 hoy, sale 14:00 o 22:00 manana). '
+                'Entrada un dia y salida al dia siguiente, a la hora que '
+                'configure arriba (ej. entra hoy 17:00, termina manana 10:00). '
                 'No cierra el turno a medianoche.',
               ),
               value: _turnoNocturno,
