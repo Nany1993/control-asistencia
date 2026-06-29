@@ -276,5 +276,39 @@ void main() {
 
       expect(activo?.id, 1);
     });
+
+    test('cierre sin turno usa 23:59 del dia de la entrada', () {
+      final entrada = Registro(
+        empresaId: 1,
+        empleadoId: 1,
+        tipo: TipoMarcacion.entrada,
+        fechaHora: DateTime(2026, 6, 29, 20),
+        fotoPath: 'foto.jpg',
+      );
+
+      expect(
+        MarcacionValidator.fechaCierreSalidaPendiente(entrada),
+        DateTime(2026, 6, 29, 23, 59, 59),
+      );
+    });
+
+    test('requiereCierreSalidaPendiente false si ultimo es null o salida', () {
+      expect(
+        MarcacionValidator.requiereCierreSalidaPendiente(null),
+        isFalse,
+      );
+      expect(
+        MarcacionValidator.requiereCierreSalidaPendiente(
+          Registro(
+            empresaId: 1,
+            empleadoId: 1,
+            tipo: TipoMarcacion.salida,
+            fechaHora: DateTime(2026, 6, 29, 17),
+            fotoPath: 'f.jpg',
+          ),
+        ),
+        isFalse,
+      );
+    });
   });
 }
